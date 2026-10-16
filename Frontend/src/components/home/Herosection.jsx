@@ -18,7 +18,7 @@ function HeroSection() {
         </div>
 
         <h1>
-          Stuck on the road?
+         <b>Stuck on the road?</b> 
           <span>Get help fast.</span>
         </h1>
 
