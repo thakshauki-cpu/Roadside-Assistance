@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 
 import "../styles/LoginPage.css";
+import { Link } from "react-router-dom";
 
 function LoginPage() {
   const [role, setRole] = useState("customer");
@@ -185,7 +186,7 @@ function LoginPage() {
 
         <p className="create-account-text">
           New customer stranded on road?
-          <a href="#register">Create account</a>
+          <Link to="/register">Create account</Link>
         </p>
 
         <div className="emergency-card">

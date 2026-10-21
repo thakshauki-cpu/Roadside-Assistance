@@ -30,30 +30,31 @@ function RegisterPage() {
 
     // Frontend validation only.
     // Backend API integration will add.
+
+
+
+
     alert("Form validated! Backend registration is not connected yet.");
   };
 
   return (
     <main className="register-page">
       <Link to="/" className="register-brand">
-        <img
-          src="/assets/logo.png"
-          alt="RoadMate Logo"
-          className="register-logo"
-          onError={(event) => {
-            event.currentTarget.style.display = "none";
-          }}
+       <img
+          src="/src/assets/logo.png"
+          alt="Roadmate"
+          className="logo"
+         
         />
-        <span>RoadMate</span>
       </Link> 
 
       <section className="register-card">
         <div className="register-heading">
           <div>
+            
             <h1>Create Account</h1>
             <p>
-              Get instant breakdown support, live GPS tracking, and
-              transparent upfront pricing across Tamil Nadu.
+              Get instant breakdown support, live GPS tracking, and transparent upfront pricing across Batticaloa.
             </p>
           </div>
 
@@ -106,7 +107,7 @@ function RegisterPage() {
           <div className="register-field">
             <div className="register-password-label">
               <label htmlFor="password">CREATE PASSWORD</label>
-              <span>Min. 8 characters</span>
+              <span>Min.8 characters</span>
             </div>
 
             <div className="register-input-wrap">
@@ -123,7 +124,7 @@ function RegisterPage() {
               />
 
               <button
-                type="button"
+               type="button"
                 className="register-eye-button"
                 onClick={() => setShowPassword(!showPassword)}
                 aria-label={showPassword ? "Hide password" : "Show password"}
@@ -146,7 +147,7 @@ function RegisterPage() {
               </a>{" "}
               &amp;{" "}
               <a href="/safety-policy" target="_blank" rel="noreferrer">
-                Roadside Safety Policy
+                Roadside Safety Policy 
               </a>.
             </span>
           </label>
