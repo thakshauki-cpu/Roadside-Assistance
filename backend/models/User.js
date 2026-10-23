@@ -27,14 +27,16 @@ const userSchema = new mongoose.Schema(
         //LoginPage account type 
         role:{
             type:String,
-            enum:["customer","mechanic","tow"],
+            enum:["customer","mechanic"],
             default:"customer",
             required:true,
-        },//
+        },
 
     },
     {
-        timestamps:true,
+        timestamps:true, // automatically adds two fields to each user document:
+// - createdAt — the date and time the user record was created.
+// - updatedAt — the date and time the record was last updated.
     }
 );
 const User = mongoose.model("User",userSchema);
