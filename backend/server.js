@@ -1,17 +1,27 @@
-const express =require("express");
-const cors=require("cors");
-require("dotenv").config();
+import express from 'express'
 
-const app =express();
+import dotenv from "dotenv";
+import connectDB from "./config/db.js"
 
-//Middleware
-app.use(cors());
-app.use(express.json());
+const app = express()
 
-//Test api
-app.get("/",(req,res)=>{
-    res.send("Roadmate bakend id runnning");
+dotenv.config();
 
-});
- const PORT=process.env.PORT || 5000;
- 
+const MONGOURI=process.env.MONGOURI
+const PORT=process.env.PORT||5000;
+
+await connectDB();
+
+app.get('/', (req,res) =>{
+    res.send("sever is running")
+})
+
+app.listen(PORT, () => {
+    console.log(`Server is Running on ${PORT}`)
+})
+
+
+
+
+
+
