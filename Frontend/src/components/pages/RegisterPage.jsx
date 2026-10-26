@@ -133,6 +133,35 @@ function RegisterPage() {
               </button>
             </div>
           </div>
+ <div className="register-field">
+            <div className="register-password-label">
+              <label htmlFor="password">CONFIRM PASSWORD</label>
+              <span>Min.8 characters</span>
+            </div>
+
+            <div className="register-input-wrap">
+              <LockKeyhole size={14} />
+              <input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                placeholder="Enter your password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                autoComplete="new-password"
+                minLength={8}
+                required
+              />
+
+              <button
+               type="button"
+                className="register-eye-button"
+                onClick={() => setShowPassword(!showPassword)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+              </button>
+            </div>
+          </div>
 
           <label className="register-terms">
             <input
@@ -154,6 +183,7 @@ function RegisterPage() {
 
           <div className="register-divider" />
 
+        
           <button type="submit" className="register-submit">
             <LogIn size={15} />
             Create Account

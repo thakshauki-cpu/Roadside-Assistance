@@ -131,37 +131,7 @@ function LoginPage() {
               )}
             </button>
           </div>
-          <label className="password-label" htmlFor="login-password">
-            Confirm Password
-          </label>
-           
-
-          <div className="login-input-wrapper password-input-wrapper">
-            <LockKeyhole size={16} />
-
-            <input
-              id="login-password"
-              type={showPassword ? "text" : "password"}
-              placeholder="Enter your password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              autoComplete="current-password"
-              required
-            />
-
-            <button
-              className="password-toggle"
-              type="button"
-              onClick={() => setShowPassword((previous) => !previous)}
-              aria-label={showPassword ? "Hide password" : "Show password"}
-            >
-              {showPassword ? (
-                <EyeOff size={17} />
-              ) : (
-                <Eye size={17} />
-              )}
-            </button>
-          </div>
+          
 
           <div className="login-options">
             <label className="remember-option">

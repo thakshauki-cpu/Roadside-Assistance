@@ -1,5 +1,5 @@
-import { CarFront, UserRound, Menu } from "lucide-react";
-import { useNavigate, Link } from "react-router-dom";
+import {  UserRound, Menu } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 function HomeHeader() {
   const navigate = useNavigate();
@@ -12,9 +12,10 @@ function HomeHeader() {
           alt="Roadmate"
           className="logo"
           />
-        
-     
+
       </a>
+
+
 
       <nav className="header-nav">
         <a className="active" href="#home">Home</a>
@@ -23,6 +24,8 @@ function HomeHeader() {
         <a href="#contact">Contact</a>
       </nav>
 
+
+
       <div className="header-actions">
       
           <button className="login-btn"
@@ -30,7 +33,7 @@ function HomeHeader() {
         
         <button className="register-btn" onClick={() => navigate("/register")}>Register</button>
         <button className="profile-btn" aria-label="Profile">
-          <UserRound size={18} />
+          <UserRound size={100} />
         </button>
       </div>
 
