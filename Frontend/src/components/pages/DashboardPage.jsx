@@ -1,5 +1,8 @@
 import DashboardSidebar from "../Dashboard/Sidebar.jsx";
 import DashboardTopbar from "../Dashboard/Topbar.jsx";
+import DashboardWelcome from "../Dashboard/Welcome.jsx";
+
+
 import "../styles/DashboardPage.css";
 
 function CustomerDashboard() {
@@ -9,6 +12,7 @@ function CustomerDashboard() {
 
       <main className="customer-dashboard-main">
         <DashboardTopbar />
+        <DashboardWelcome/>
       </main>
     </div>
   );

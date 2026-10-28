@@ -1,6 +1,6 @@
 
 import {
-  Activity,
+  
   LayoutDashboard,
   Wrench,
   Clock,
@@ -88,17 +88,13 @@ function DashboardSidebar({ activeItem = "Dashboard" }) {
               }`}
               onClick={() => navigate(item.path)}
             >
-              <Icon size={17} strokeWidth={1.9} />
+              <Icon size={17} strokeWidth={1.5} />
 
               <span className="sidebar-nav-label">
                 {item.label}
               </span>
 
-              {item.badge && (
-                <span className="sidebar-nav-badge">
-                  {item.badge}
-                </span>
-              )}
+            
             </button>
           );
         })}
