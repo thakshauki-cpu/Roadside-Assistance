@@ -1,0 +1,715 @@
+/* =========================================================
+   STEP 5: TRACKING  (Mechanic is on the way)
+   Uses the shared classes from GetHelp.css (gethelp-page, gethelp-card,
+   gh-bottom-bar ...). Only Tracking-specific styles are here.
+   All class names start with "track-".
+   ========================================================= */
+
+/* index.css centres the text of the whole app, so we set left align for this page */
+.track-header,
+.track-grid {
+  text-align: left;
+}
+
+/* ---------- Heading card ---------- */
+.track-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+  padding: 22px 24px;
+  background: #ffffff;
+  border: 1px solid #e9edf5;
+  border-radius: 14px;
+}
+
+.track-header h1 {
+  margin: 4px 0 0;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+  color: #172238;
+}
+
+.track-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7488;
+}
+
+.track-live-text {
+  color: #2055f5;
+}
+
+.track-gps-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #0f7a4a;
+  background: #d9f8ea;
+  border-radius: 999px;
+}
+
+.track-gps-dot {
+  width: 8px;
+  height: 8px;
+  background: #0f7a4a;
+  border-radius: 50%;
+}
+
+/* ---------- Two column layout ---------- */
+.track-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.track-left,
+.track-right {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ---------- Map ---------- */
+.track-map {
+  position: relative;
+  height: 540px;
+  min-height: 460px;
+  overflow: hidden;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.45) 1px, transparent 1px) 0 0 / 48px 48px,
+    linear-gradient(90deg, rgba(255, 255, 255, 0.45) 1px, transparent 1px) 0 0 / 48px 48px,
+    #cfe3f2;
+  border-radius: 14px;
+  box-shadow: 0 4px 10px rgba(23, 34, 56, 0.12);
+}
+
+.track-map-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Shown only while the map picture file does not exist */
+.track-missing {
+  position: absolute;
+  left: 16px;
+  bottom: 70px;
+  max-width: 300px;
+  margin: 0;
+  padding: 10px 12px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #172238;
+  background: rgba(255, 255, 255, 0.92);
+  border: 2px dashed #2055f5;
+  border-radius: 10px;
+}
+
+.track-route {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.track-route-road {
+  stroke: rgba(255, 255, 255, 0.9);
+  stroke-width: 9;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.track-route-line {
+  stroke: #2055f5;
+  stroke-width: 4;
+  stroke-dasharray: 3 6;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+/* Floating box at the top */
+.track-floater {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  right: 72px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  width: fit-content;
+  max-width: calc(100% - 88px);
+  padding: 9px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #4b5568;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(23, 34, 56, 0.12);
+}
+
+.track-floater span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.track-floater-road {
+  font-size: 14px;
+  color: #2055f5;
+}
+
+.track-floater b {
+  font-weight: 400;
+  color: #172238;
+}
+
+.track-floater b.track-green {
+  color: #0f7a4a;
+}
+
+.track-divider {
+  width: 1px;
+  height: 16px;
+  background: #dae2fd;
+}
+
+/* Buttons on the right */
+.track-controls {
+  position: absolute;
+  right: 16px;
+  bottom: 70px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.track-controls button {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #172238;
+  background: #ffffff;
+  border: none;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(23, 34, 56, 0.15);
+  cursor: pointer;
+}
+
+/* Pins. left/top come from the component. translate puts the circle's centre on the point. */
+.track-pin {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  transform: translate(-50%, -100%);
+  transition: left 1s linear, top 1s linear;
+}
+
+.track-pin-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  color: #ffffff;
+  border-radius: 999px;
+  box-shadow: 0 6px 12px rgba(23, 34, 56, 0.2);
+}
+
+.track-pin-label-blue {
+  background: #2055f5;
+}
+
+.track-pin-label-dark {
+  color: #eef0ff;
+  background: #283044;
+}
+
+.track-red-dot {
+  width: 8px;
+  height: 8px;
+  background: #ce2b30;
+  border-radius: 50%;
+}
+
+.track-pin-circle {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 4px rgba(32, 85, 245, 0.2), 0 6px 12px rgba(23, 34, 56, 0.2);
+}
+
+.track-pin-circle-blue {
+  background: #2055f5;
+}
+
+.track-pin-circle-red {
+  background: #aa0a1b;
+  box-shadow: 0 4px 8px rgba(23, 34, 56, 0.2);
+}
+
+/* Bottom banner on the map */
+.track-banner {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #4b5568;
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 12px;
+}
+
+.track-banner span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.track-banner strong {
+  color: #2055f5;
+  white-space: nowrap;
+}
+
+/* ---------- Milestones ---------- */
+.track-milestones-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  color: #172238;
+}
+
+.track-milestones-top span {
+  font-size: 12px;
+  font-weight: 600;
+  color: #0f7a4a;
+}
+
+.track-steps {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-top: 14px;
+}
+
+.track-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+}
+
+.track-step-circle {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #4b5568;
+  background: #e2e7ff;
+  border-radius: 50%;
+}
+
+.track-step strong {
+  font-size: 12px;
+  color: #4b5568;
+}
+
+.track-step small {
+  font-size: 11px;
+  color: #737688;
+}
+
+.track-step.done .track-step-circle {
+  color: #ffffff;
+  background: #0f7a4a;
+}
+
+.track-step.done strong {
+  color: #172238;
+}
+
+.track-step.active .track-step-circle {
+  color: #ffffff;
+  background: #2055f5;
+}
+
+.track-step.active strong,
+.track-step.active small {
+  color: #2055f5;
+}
+
+.track-step.active strong {
+  font-weight: 800;
+}
+
+.track-step.pending {
+  opacity: 0.5;
+}
+
+/* ---------- ETA card ---------- */
+.track-eta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 22px;
+  color: #ffffff;
+  background: linear-gradient(152deg, #0043d4 0%, #2055f5 100%);
+  border-radius: 14px;
+  box-shadow: 0 4px 10px rgba(23, 34, 56, 0.15);
+}
+
+.track-eta-label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.6px;
+  color: #dce1ff;
+}
+
+.track-eta-time {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 2px 0;
+}
+
+.track-eta-time b {
+  font-size: 48px;
+  line-height: 56px;
+  font-weight: 900;
+  letter-spacing: -1px;
+}
+
+.track-eta-time span {
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.track-eta small {
+  font-size: 14px;
+  color: #b7c4ff;
+}
+
+.track-eta-icon {
+  width: 56px;
+  height: 56px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 16px;
+}
+
+/* ---------- Mechanic card ---------- */
+.track-mechanic {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 22px;
+}
+
+.track-mechanic-top {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.track-mechanic h2 {
+  margin: 0;
+  font-size: 20px;
+  color: #172238;
+}
+
+.track-mechanic p {
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: #4b5568;
+}
+
+.track-photo-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.track-photo {
+  width: 80px;
+  height: 80px;
+  display: block;
+  object-fit: cover;
+  border-radius: 16px;
+  box-shadow: 0 4px 10px rgba(23, 34, 56, 0.15);
+}
+
+/* Shown only while the photo file does not exist */
+.track-photo-missing {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: 800;
+  color: #2055f5;
+  background: #e2e7ff;
+  border: 2px dashed #2055f5;
+  box-sizing: border-box;
+}
+
+.track-photo-badge {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  background: #0f7a4a;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  box-sizing: border-box;
+}
+
+.track-rating {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  font-size: 12px;
+  color: #f59e0b;
+}
+
+.track-rating small {
+  font-size: 12px;
+  font-weight: 600;
+  color: #4b5568;
+}
+
+.track-facts {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  background: #f2f5ff;
+  border-radius: 12px;
+}
+
+.track-facts div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+}
+
+.track-facts span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 600;
+  color: #4b5568;
+  white-space: nowrap;
+}
+
+.track-facts strong {
+  text-align: right;
+  font-weight: 600;
+  color: #172238;
+}
+
+.track-mono {
+  font-family: "Courier New", monospace;
+  font-weight: 700 !important;
+}
+
+.track-contact {
+  display: flex;
+  gap: 8px;
+}
+
+.track-call,
+.track-message {
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 700;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.track-call {
+  flex: 1;
+  color: #ffffff;
+  background: #2055f5;
+}
+
+.track-call:hover {
+  background: #1a47d1;
+}
+
+.track-message {
+  padding: 0 18px;
+  color: #172238;
+  background: #e2e7ff;
+}
+
+.track-share {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #0043d4;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+/* ---------- Safety card ---------- */
+.track-safety {
+  padding: 16px;
+}
+
+.track-safety strong {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: #172238;
+}
+
+.track-safety p {
+  margin: 8px 0 12px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #4b5568;
+}
+
+.track-safety-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #737688;
+}
+
+.track-safety-bottom a {
+  color: #737688;
+}
+
+.track-safety-bottom button {
+  font-size: 12px;
+  font-weight: 700;
+  color: #aa0a1b;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+/* ---------- Bottom bar ---------- */
+.track-bottom-left {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #4b5568;
+}
+
+/* The Proceed button looks pale while it is switched off */
+.gh-next-button:disabled {
+  color: #737688;
+  background: #e2e7ff;
+  cursor: not-allowed;
+}
+
+/* ---------- Message at the bottom of the screen ---------- */
+.track-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  max-width: calc(100% - 32px);
+  padding: 12px 18px;
+  font-size: 14px;
+  color: #ffffff;
+  background: #172238;
+  border-radius: 12px;
+  box-shadow: 0 8px 20px rgba(23, 34, 56, 0.3);
+  transform: translateX(-50%);
+  z-index: 50;
+}
+
+/* ---------- Small screens ---------- */
+@media (max-width: 1000px) {
+  .track-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .track-map {
+    height: 460px;
+  }
+
+  .track-steps {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+  }
+
+  .track-pin-label {
+    font-size: 11px;
+  }
+
+  .track-eta-time b {
+    font-size: 40px;
+  }
+
+  .track-header h1 {
+    font-size: 20px;
+  }
+}

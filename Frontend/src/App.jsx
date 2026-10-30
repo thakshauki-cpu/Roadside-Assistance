@@ -12,7 +12,8 @@ import Location from "./components/pages/getHelp/Location";
 import VehicleType from "./components/pages/getHelp/VehicleType";
 import Problem from "./components/pages/getHelp/Problem";
 import MechanicFound from "./components/pages/getHelp/MechanicFound";
-
+import Tracking from "./components/pages/getHelp/Tracking";
+import Summary from "./components/pages/getHelp/Summary";
 
 function App() {
   return(
@@ -80,6 +81,31 @@ function App() {
     </ProtectedRoute>
   }
 />
+
+{/* Step 5: Tracking (Mechanic is on the way) */}
+<Route
+  path="/get-help/tracking"
+  element={
+    <ProtectedRoute>
+      <Tracking />
+    </ProtectedRoute>
+  }
+/>
+
+{/* Step 6: Summary (Service completed, payment and rating) */}
+<Route
+  path="/get-help/summary"
+  element={
+    <ProtectedRoute>
+      <Summary />
+    </ProtectedRoute>
+  }
+/>
+
+
+
+
+
 
       </Routes>
    
