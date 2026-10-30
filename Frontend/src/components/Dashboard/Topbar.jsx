@@ -3,6 +3,8 @@ import { Search, Bell, UserRound } from "lucide-react";
 import "./Topbar.css";
 
 function DashboardTopbar() {
+const user = JSON.parse(localStorage.getItem("user"));
+
   return (
     <header className="dashboard-topbar">
       <div className="topbar-search">
@@ -30,7 +32,7 @@ function DashboardTopbar() {
 
           <div className="topbar-user-info">
             <span className="topbar-user-name">
-              Customer
+           {user ? user.fullName : "Customer"}
             </span>
             <span className="topbar-user-role">
               RoadMate User

@@ -20,6 +20,15 @@ import {
 import "./Welcome.css";
 
 function WelcomeSection() {
+
+    // localStorage keeps data as text, so JSON.parse turns it back into an object
+  const user = JSON.parse(localStorage.getItem("user"));
+
+  // fullName is "John Doe", split(" ") makes ["John", "Doe"], [0] takes "John"
+  // If no user is saved, firstName is an empty text
+  const firstName = user ? user.fullName.split(" ")[0] : "";
+
+
   return (
     <section className="welcome-dashboard">
       {/* Greeting */}
@@ -27,7 +36,7 @@ function WelcomeSection() {
         <b>
           Welcome,
           <br /><br/>
-          John!
+          {firstName}!
         </b>
       </div>
 

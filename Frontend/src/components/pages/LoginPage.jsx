@@ -1,4 +1,4 @@
-
+import { loginUser } from "../../api/auth.js";
 import { useState } from "react";
 import {
   CarFront,
@@ -13,27 +13,59 @@ import {
 } from "lucide-react";
 
 import "../styles/LoginPage.css";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 function LoginPage() {
+  const navigate = useNavigate();
   const [role, setRole] = useState("customer");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberDevice, setRememberDevice] = useState(true);
-  const [emailOrPhone, setEmailOrPhone] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const handleLogin = (event) => {
-    event.preventDefault();
+  const [error, setError] = useState("");     // error message to show
+  const [loading, setLoading] = useState(false); // true while waiting for backend
 
-    if (!emailOrPhone.trim() || !password) {
-      alert("Please enter your email/phone number and password.");
-      return;
-    }
 
-    // Connect your backend authentication API here.
-    alert(`Login form submitted for ${role === "customer" ? "Customer" : "Mechanic / Tow"}.`);
-  };
 
+  // const handleLogin = (event) => {
+  //   event.preventDefault();
+
+  //   if (!email.trim() || !password) {
+  //     alert("Please enter your email/phone number and password.");
+  //     return;
+  //   }
+
+  //   navigate("/dashboard");
+  // };
+const handleLogin = async (event) => {
+  event.preventDefault();
+  setError("");
+
+  if (!email.trim() || !password) {
+    setError("Please enter your email and password.");
+    return;
+  }
+
+  try {
+    setLoading(true);
+
+    // Send email, password and role to the backend
+    const data = await loginUser({ email, password, role });
+
+    // Save the token and user so other pages can use them
+    localStorage.setItem("token", data.token);
+    localStorage.setItem("user", JSON.stringify(data.user));
+
+    // Mechanic dashboard is not built yet, so both go to /dashboard for now
+    navigate("/dashboard");
+  } catch (err) {
+    // err.message is the message sent by the backend
+    setError(err.message);
+  } finally {
+    setLoading(false); // runs whether login worked or failed
+  }
+};
   return (
     <main className="login-page">
       <section className="login-card">
@@ -82,9 +114,9 @@ function LoginPage() {
         <form className="login-form" onSubmit={handleLogin}>
           <div className="login-label-row">
             <label htmlFor="login-identity">
-              Email or Phone Number
+              Email 
             </label>
-            <span>+94 77 123 4567</span>
+          
           </div>
 
           <div className="login-input-wrapper">
@@ -92,9 +124,9 @@ function LoginPage() {
             <input
               id="login-identity"
               type="text"
-              placeholder="e.g. 077 459 2810 or driver@roadmate.lk"
-              value={emailOrPhone}
-              onChange={(event) => setEmailOrPhone(event.target.value)}
+              placeholder=" driver@roadmate.lk"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
               autoComplete="username"
               required
             />
@@ -148,10 +180,21 @@ function LoginPage() {
             </a>
           </div>
 
-          <button type="submit" className="login-submit-button">
+          {/* <button type="submit" className="login-submit-button">
             <LogIn size={16} />
             Login
-          </button>
+          </button> */}
+
+        {error && <p className="form-error">{error}</p>}
+
+<button type="submit" className="login-submit-button" disabled={loading}>
+  <LogIn size={16} />
+  {loading ? "Logging in..." : "Login"}
+</button>
+
+
+
+
         </form>
 
         <p className="create-account-text">

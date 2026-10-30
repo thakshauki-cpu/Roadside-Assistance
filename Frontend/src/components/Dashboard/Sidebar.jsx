@@ -25,11 +25,11 @@ const menuItems = [
     icon: Wrench,
     path: "/find-mechanic",
   },
-  {
-    label: "My Requests",
-    icon: Clock,
-    path: "/my-requests",
-  },
+  // {
+  //   label: "My Requests",
+  //   icon: Clock,
+  //   path: "/my-requests",
+  // },
   {
     label: "Notifications",
     icon: Bell,
@@ -56,10 +56,16 @@ const menuItems = [
 function DashboardSidebar({ activeItem = "Dashboard" }) {
   const navigate = useNavigate();
 
+  // const handleLogout = () => {
+  //   localStorage.removeItem("token");
+  //   navigate("/login");
+  // };
+
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    navigate("/login");
-  };
+  localStorage.removeItem("token");
+  localStorage.removeItem("user"); // also remove the saved user
+  navigate("/login");
+};
 
   return (
     <aside className="dashboard-sidebar">

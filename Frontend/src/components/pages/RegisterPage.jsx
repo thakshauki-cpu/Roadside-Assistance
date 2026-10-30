@@ -4,6 +4,9 @@ import { Link, useNavigate } from "react-router-dom";
 import { Mail, LockKeyhole, Eye, EyeOff, LogIn } from "lucide-react";
 import "../styles/Register.css";
 
+import { registerUser } from "../../api/auth.js";
+
+
 
 function RegisterPage() {
   const navigate = useNavigate();
@@ -15,27 +18,72 @@ function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [agreed, setAgreed] = useState(false);
 
-  const handleSubmit = (event) => {
-    event.preventDefault();
-
-    if (!agreed) {
-      alert("Please agree to the Terms of Service and Safety Policy.");
-      return;
-    }
-
-    if (password.length < 8) {
-      alert("Password must contain at least 8 characters.");
-      return;
-    }
-
-    // Frontend validation only.
-    // Backend API integration will add.
+const [confirmPassword, setConfirmPassword] = useState("");
+const [error, setError] = useState("");
+const [loading, setLoading] = useState(false);
 
 
 
+  // const handleSubmit = (event) => {
+  //   event.preventDefault();
 
-    alert("Form validated! Backend registration is not connected yet.");
-  };
+  //   if (!agreed) {
+  //     alert("Please agree to the Terms of Service and Safety Policy.");
+  //     return;
+  //   }
+
+  //   if (password.length < 8) {
+  //     alert("Password must contain at least 8 characters.");
+  //     return;
+  //   }
+
+  //   // Frontend validation only.
+  //   // Backend API integration will add.
+
+
+
+
+  //   alert("Form validated! Backend registration is not connected yet.");
+  // };
+
+
+const handleSubmit = async (event) => {
+  event.preventDefault();
+  setError("");
+
+  if (!agreed) {
+    setError("Please agree to the Terms of Service and Safety Policy.");
+    return;
+  }
+
+  if (password.length < 8) {
+    setError("Password must contain at least 8 characters.");
+    return;
+  }
+
+  // Check both password fields match
+  if (password !== confirmPassword) {
+    setError("Passwords do not match.");
+    return;
+  }
+
+  try {
+    setLoading(true);
+
+    // This page is for customers, so role is "customer"
+    await registerUser({ fullName, email, mobile, password, role: "customer" });
+
+    alert("Account created successfully! Please login.");
+    navigate("/login");
+  } catch (err) {
+    setError(err.message); // example: "User already exists with this email"
+  } finally {
+    setLoading(false);
+  }
+};
+
+
+
 
   return (
     <main className="register-page">
@@ -133,24 +181,24 @@ function RegisterPage() {
               </button>
             </div>
           </div>
- <div className="register-field">
+         <div className="register-field">
             <div className="register-password-label">
-              <label htmlFor="password">CONFIRM PASSWORD</label>
+              <label htmlFor="confirmPassword">CONFIRM PASSWORD</label>
               <span>Min.8 characters</span>
             </div>
 
             <div className="register-input-wrap">
               <LockKeyhole size={14} />
               <input
-                id="password"
-                type={showPassword ? "text" : "password"}
-                placeholder="Enter your password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                autoComplete="new-password"
-                minLength={8}
-                required
-              />
+                   id="confirmPassword"
+                   type={showPassword ? "text" : "password"}
+                   placeholder="Re-enter your password"
+                   value={confirmPassword}
+                    onChange={(event) => setConfirmPassword(event.target.value)}
+                   autoComplete="new-password"
+                    minLength={8}
+                   required
+                  />
 
               <button
                type="button"
@@ -184,10 +232,12 @@ function RegisterPage() {
           <div className="register-divider" />
 
         
-          <button type="submit" className="register-submit">
-            <LogIn size={15} />
-            Create Account
-          </button>
+         {error && <p className="form-error">{error}</p>}
+
+               <button type="submit" className="register-submit" disabled={loading}>
+                <LogIn size={15} />
+                   {loading ? "Creating account..." : "Create Account"}
+           </button>
 
           <p className="register-login-link">
             Already have an account?{" "}
