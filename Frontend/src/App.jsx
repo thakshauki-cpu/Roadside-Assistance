@@ -8,6 +8,10 @@ import CustomerDashboard from "./components/pages/DashboardPage";
 import FindMechanic from "./components/pages/FindMechanic";
 import Notifications from "./components/pages/Notifications";
 
+import Location from "./components/pages/getHelp/Location";
+import VehicleType from "./components/pages/getHelp/VehicleType";
+import Problem from "./components/pages/getHelp/Problem";
+import MechanicFound from "./components/pages/getHelp/MechanicFound";
 
 
 function App() {
@@ -42,6 +46,41 @@ function App() {
     </ProtectedRoute>
   }
 />
+
+<Route
+  path="/get-help/location"
+  element={
+    <ProtectedRoute>
+      <Location />
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path="/get-help/vehicle"
+  element={
+    <ProtectedRoute>
+      <VehicleType />
+    </ProtectedRoute>
+  }
+/>
+
+<Route
+  path="/get-help/problem"
+  element={
+    <ProtectedRoute>
+      <Problem />
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path="/get-help/mechanic-found"
+  element={
+    <ProtectedRoute>
+      <MechanicFound />
+    </ProtectedRoute>
+  }
+/>
+
       </Routes>
    
     

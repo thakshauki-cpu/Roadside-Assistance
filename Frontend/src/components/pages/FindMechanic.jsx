@@ -24,7 +24,7 @@ import DashboardSidebar from "../Dashboard/Sidebar";
 import DashboardTopbar from "../Dashboard/Topbar";
 import "../styles/FindMechanic.css";
 
-const mechanics = [
+const mechanics = [                                                                             
   {
     id: 1,
     name: "Mike's Roadside Service",
@@ -470,3 +470,14 @@ function FindMechanic() {
 }
 
 export default FindMechanic;
+
+
+
+// request 
+
+// quotation 
+// onway
+
+// completed 
+// payment 
+// review

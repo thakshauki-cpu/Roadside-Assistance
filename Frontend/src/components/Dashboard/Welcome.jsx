@@ -19,6 +19,8 @@ import {
 
 import "./Welcome.css";
 
+import { useNavigate } from "react-router-dom";
+
 function WelcomeSection() {
 
     // localStorage keeps data as text, so JSON.parse turns it back into an object
@@ -28,7 +30,7 @@ function WelcomeSection() {
   // If no user is saved, firstName is an empty text
   const firstName = user ? user.fullName.split(" ")[0] : "";
 
-
+   const navigate = useNavigate();
   return (
     <section className="welcome-dashboard">
       {/* Greeting */}
@@ -63,7 +65,9 @@ function WelcomeSection() {
             <button
               type="button"
               className="get-help-button"
+               onClick={() => navigate("/get-help/location")}
             >
+              
               <span>
                 Get Help
                 <br />

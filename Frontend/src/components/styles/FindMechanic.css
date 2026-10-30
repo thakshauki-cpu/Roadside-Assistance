@@ -33,8 +33,8 @@
 
 .find-title h1 {
   margin: 0;
-  font-size: 19px;
-  font-weight: 750;
+  font-size: 20px;
+  font-weight: 700;
   color: #172238;
 }
 
@@ -219,7 +219,7 @@
 .mechanic-info h2 {
   margin: 0 0 4px;
   color: #172238;
-  font-size: 13px;
+  font-size: 19px;
   font-weight: 750;
   line-height: 1.35;
 }
@@ -232,7 +232,7 @@
   border-radius: 20px;
   background: #e7edff;
   color: #2450d5;
-  font-size: 9px;
+  font-size: 12px;
   font-weight: 700;
 }
 
@@ -249,7 +249,7 @@
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .rating {
@@ -286,7 +286,7 @@
   border-radius: 20px;
   background: #d6faeb;
   color: #087b58;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
   white-space: nowrap;
 }
@@ -312,7 +312,7 @@
   border-radius: 4px;
   background: #f0f2fa;
   color: #45516b;
-  font-size: 9px;
+  font-size: 12px;
   font-weight: 600;
 }
 
@@ -770,12 +770,12 @@
 
 .map-trust-cards strong {
   color: #182238;
-  font-size: 10px;
+  font-size: 15px;
 }
 
 .map-trust-cards small {
   color: #7b8497;
-  font-size: 9px;
+  font-size: 10px;
 }
 
 /* Responsive layout */

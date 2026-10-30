@@ -25,11 +25,11 @@ const menuItems = [
     icon: Wrench,
     path: "/find-mechanic",
   },
-  // {
-  //   label: "My Requests",
-  //   icon: Clock,
-  //   path: "/my-requests",
-  // },
+  {
+  label: "My Requests",
+  icon: Clock,
+  path: "/get-help/location",
+},
   {
     label: "Notifications",
     icon: Bell,

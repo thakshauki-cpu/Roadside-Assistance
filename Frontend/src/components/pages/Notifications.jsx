@@ -127,8 +127,10 @@ function Notifications() {
     (notification) => notification.unread
   ).length;
 
-  const filteredNotifications = useMemo(() => {
-    return notifications.filter((notification) => {
+
+
+  const filteredNotifications = useMemo(() => {                           // notificatin,// activeTab,// search
+    return notifications.filter((notification) => {               
       const matchesTab =
         activeTab === "All" ||
         (activeTab === "Unread" && notification.unread) ||
@@ -144,6 +146,9 @@ function Notifications() {
       return matchesTab && matchesSearch;
     });
   }, [notifications, activeTab, search]);
+
+
+
 
   const markAllAsRead = () => {
     setNotifications((previous) =>
@@ -542,3 +547,15 @@ function Notifications() {
 }
 
 export default Notifications;
+
+
+
+
+// request 
+
+// quotation 
+// onway
+
+// completed 
+// payment 
+// review    
