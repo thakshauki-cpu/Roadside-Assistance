@@ -1,5 +1,5 @@
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import {
   Search,
   Star,
@@ -24,100 +24,108 @@ import DashboardSidebar from "../Dashboard/Sidebar";
 import DashboardTopbar from "../Dashboard/Topbar";
 import "../styles/FindMechanic.css";
 
-const mechanics = [                                                                             
-  {
-    id: 1,
-    name: "Mike's Roadside Service",
-    rating: "4.9",
-    reviews: 128,
-    distance: "2.1 km away",
-    eta: "6 min ETA",
-    status: "Available Now",
-    badge: "RoadMate Certified",
-    services: ["Tyre Repair", "Battery Jumpstart", "Electrical Diag", "Flatbed Towing"],
-    image: "",
-  },
-  {
-    id: 2,
-    name: "Chennai Auto Care & Recovery",
-    rating: "4.8",
-    reviews: 84,
-    distance: "2.8 km away",
-    eta: "9 min ETA",
-    status: "Available Now",
-    badge: "Verified Partner",
-    services: ["Battery Jumpstart", "Alternator Check", "Engine Diagnostics"],
-    image: "",
-  },
-  {
-    id: 3,
-    name: "Karthik Quick Tow & Tyre Hub",
-    rating: "4.7",
-    reviews: 96,
-    distance: "3.5 km away",
-    eta: "12 min ETA",
-    status: "Available Now",
-    badge: "Heavy Towing",
-    services: ["Tyre Puncture", "Flatbed Towing", "Wheel Alignment"],
-    image: "",
-  },
-  {
-    id: 4,
-    name: "rithviks Mobile Mechanic Squad",
-    rating: "4.9",
-    reviews: 210,
-    distance: "4.2 km away",
-    eta: "15 min ETA",
-    status: "Busy (Next slot 20m)",
-    badge: "Mobile Mechanic",
-    services: ["Fuel Delivery", "Key Lockout Assistance", "Electrical Wiring"],
-    image: "",
-  },
-];
-
 const filters = ["All Services", "Tyre Repair", "Battery", "Towing"];
 
 function FindMechanic() {
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState("All Services");
-  const [selectedId, setSelectedId] = useState(1);
+  const [selectedId, setSelectedId] = useState(null);
   const [view, setView] = useState("list");
   const [showAvailableOnly, setShowAvailableOnly] = useState(false);
   const [zoom, setZoom] = useState(1);
+  const [mechanics, setMechanics] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const fetchMechanics = async () => {
+      try {
+        setLoading(true);
+        setError("");
+
+        const token = localStorage.getItem("token");
+
+        if (!token) {
+          throw new Error("Please login to view mechanics.");
+        }
+
+        const response = await fetch(
+          `${import.meta.env.VITE_API_URL}/api/mechanics`,
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || "Failed to fetch mechanics.");
+        }
+
+        setMechanics(data.mechanics || []);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMechanics();
+  }, []);
 
   const filteredMechanics = useMemo(() => {
     return mechanics.filter((mechanic) => {
       const searchText = search.toLowerCase();
 
       const matchesSearch =
-        mechanic.name.toLowerCase().includes(searchText) ||
-        mechanic.services.some((service) =>
+        mechanic.businessName?.toLowerCase().includes(searchText) ||
+        mechanic.user?.fullName?.toLowerCase().includes(searchText) ||
+        mechanic.services?.some((service) =>
           service.toLowerCase().includes(searchText)
-        );
+        ) ||
+        mechanic.location?.address?.toLowerCase().includes(searchText);
 
       const matchesFilter =
         activeFilter === "All Services" ||
-        mechanic.services.some((service) => {
-          const value = service.toLowerCase();
-          if (activeFilter === "Tyre Repair") return value.includes("tyre");
-          if (activeFilter === "Battery") return value.includes("battery");
-          if (activeFilter === "Towing") return value.includes("towing");
+        mechanic.services?.some((service) => {
+          if (activeFilter === "Tyre Repair") {
+            return service === "Tyre Repair";
+          }
+
+          if (activeFilter === "Battery") {
+            return service === "Battery Jumpstart";
+          }
+
+          if (activeFilter === "Towing") {
+            return service === "Towing";
+          }
+
           return true;
         });
 
       const matchesAvailability =
-        !showAvailableOnly || mechanic.status === "Available Now";
+        !showAvailableOnly || mechanic.isAvailable;
 
       return matchesSearch && matchesFilter && matchesAvailability;
     });
-  }, [search, activeFilter, showAvailableOnly]);
+  }, [mechanics, search, activeFilter, showAvailableOnly]);
 
   const selectedMechanic =
-    mechanics.find((mechanic) => mechanic.id === selectedId) ||
+    filteredMechanics.find((mechanic) => mechanic._id === selectedId) ||
     filteredMechanics[0];
 
   const handleDispatch = (mechanic) => {
-    alert(`Dispatch request selected for ${mechanic.name}. API connection is not added yet.`);
+    if (!mechanic.isAvailable) {
+      alert("This mechanic is currently unavailable.");
+      return;
+    }
+
+    alert(
+      `Selected mechanic: ${mechanic.businessName}. Dispatch API will be connected later.`
+    );
   };
 
   return (
@@ -129,7 +137,7 @@ function FindMechanic() {
 
         <div className="find-toolbar">
           <div className="find-title">
-            <h1>Verified Mechanics</h1>
+            <h1>Find Mechanics</h1>
             <span className="nearby-count">
               {filteredMechanics.length} nearby
             </span>
@@ -138,7 +146,7 @@ function FindMechanic() {
           <div className="find-toolbar-actions">
             <span className="available-summary">
               <span className="online-dot" />
-              {filteredMechanics.filter((m) => m.status === "Available Now").length}
+              {mechanics.filter((m) => m.isAvailable).length}
               {" "}Available Now
             </span>
 
@@ -166,6 +174,7 @@ function FindMechanic() {
           <section className="mechanic-results">
             <div className="find-search-box">
               <Search size={17} />
+
               <input
                 type="search"
                 value={search}
@@ -173,6 +182,7 @@ function FindMechanic() {
                 placeholder="Search mechanics or services..."
                 aria-label="Search mechanics or services"
               />
+
               <button
                 type="button"
                 aria-label="Toggle available mechanics"
@@ -198,65 +208,65 @@ function FindMechanic() {
             </div>
 
             <div className={`mechanic-list ${view === "grid" ? "grid-view" : ""}`}>
-              {filteredMechanics.map((mechanic) => (
+
+              {loading && <p>Loading mechanics...</p>}
+
+              {error && <p>{error}</p>}
+
+              {!loading && !error && filteredMechanics.map((mechanic) => (
                 <article
-                  key={mechanic.id}
+                  key={mechanic._id}
                   className={`mechanic-card ${
-                    selectedId === mechanic.id ? "mechanic-selected" : ""
+                    selectedId === mechanic._id ? "mechanic-selected" : ""
                   }`}
-                  onClick={() => setSelectedId(mechanic.id)}
+                  onClick={() => setSelectedId(mechanic._id)}
                 >
                   <div className="mechanic-card-top">
-                    {mechanic.image ? (
-                      <img
-                        className="mechanic-avatar"
-                        src={mechanic.image}
-                        alt=""
-                      />
-                    ) : (
-                      <div className="mechanic-avatar mechanic-avatar-placeholder">
-                        <Truck size={24} />
-                      </div>
-                    )}
+                    <div className="mechanic-avatar mechanic-avatar-placeholder">
+                      <Truck size={24} />
+                    </div>
 
                     <div className="mechanic-info">
-                      <h2>{mechanic.name}</h2>
+                      <h2>{mechanic.businessName}</h2>
 
                       <span className="mechanic-badge">
                         <ShieldCheck size={12} />
-                        {mechanic.badge}
+                        {mechanic.isVerified
+                          ? "Verified Partner"
+                          : "Verification Pending"}
                       </span>
 
                       <div className="mechanic-meta">
                         <span className="rating">
-                          <Star size={13} fill="currentColor" />
-                          <strong>{mechanic.rating}</strong>
-                          <span>({mechanic.reviews} reviews)</span>
+                          <Wrench size={13} />
+                          <strong>{mechanic.experience || 0}</strong>
+                          <span>years experience</span>
                         </span>
+
                         <span className="distance">
                           <Navigation size={12} />
-                          {mechanic.distance}
+                          {mechanic.location?.address || "Address not available"}
                         </span>
                       </div>
 
                       <span className="eta-badge">
                         <Clock3 size={11} />
-                        {mechanic.eta}
+                        {mechanic.user?.fullName || "Mechanic"}
                       </span>
                     </div>
 
                     <span
                       className={`availability-badge ${
-                        mechanic.status !== "Available Now" ? "busy" : ""
+                        !mechanic.isAvailable ? "busy" : ""
                       }`}
                     >
                       <span />
-                      {mechanic.status}
+                      {mechanic.isAvailable ? "Available Now" : "Unavailable"}
                     </span>
                   </div>
 
                   <div className="mechanic-services">
-                    {mechanic.services.map((service) => (
+                    {mechanic.services?.map((service) => (
                       <span key={service}>{service}</span>
                     ))}
                   </div>
@@ -267,7 +277,10 @@ function FindMechanic() {
                       className="profile-action"
                       onClick={(event) => {
                         event.stopPropagation();
-                        alert(`Profile for ${mechanic.name}`);
+
+                        alert(
+                          `Mechanic: ${mechanic.businessName}\nName: ${mechanic.user?.fullName || "N/A"}\nPhone: ${mechanic.phone}\nExperience: ${mechanic.experience} years\nAddress: ${mechanic.location?.address}`
+                        );
                       }}
                     >
                       View Profile <span>→</span>
@@ -282,19 +295,20 @@ function FindMechanic() {
                       }}
                     >
                       <Zap size={13} />
-                      {mechanic.status === "Available Now"
+                      {mechanic.isAvailable
                         ? "Request Dispatch"
-                        : "Pre-book Dispatch"}
+                        : "Currently Unavailable"}
                     </button>
                   </div>
                 </article>
               ))}
 
-              {filteredMechanics.length === 0 && (
+              {!loading && !error && filteredMechanics.length === 0 && (
                 <div className="no-mechanics">
                   <Search size={28} />
                   <h3>No mechanics found</h3>
                   <p>Try another service or search term.</p>
+
                   <button
                     type="button"
                     onClick={() => {
@@ -322,41 +336,32 @@ function FindMechanic() {
                 <div className="map-area-label label-two">Batticaloa town</div>
                 <div className="map-area-label label-three">SERVICE AREA</div>
 
-                <button
-                  type="button"
-                  className="map-marker marker-one"
-                  onClick={() => setSelectedId(1)}
-                  aria-label="Select Mike's Roadside Service"
-                >
-                  <Wrench size={16} />
-                </button>
+                {filteredMechanics.slice(0, 4).map((mechanic, index) => {
+                  const markerClasses = [
+                    "marker-one",
+                    "marker-two",
+                    "marker-three",
+                    "marker-four",
+                  ];
 
-                <button
-                  type="button"
-                  className="map-marker marker-two"
-                  onClick={() => setSelectedId(2)}
-                  aria-label="Select Chennai Auto Care"
-                >
-                  <Truck size={16} />
-                </button>
-
-                <button
-                  type="button"
-                  className="map-marker marker-three"
-                  onClick={() => setSelectedId(3)}
-                  aria-label="Select Karthik Quick Tow"
-                >
-                  <Wrench size={16} />
-                </button>
-
-                <button
-                  type="button"
-                  className="map-marker marker-four"
-                  onClick={() => setSelectedId(4)}
-                  aria-label="Select Velachery Mobile Mechanic"
-                >
-                  <BatteryCharging size={16} />
-                </button>
+                  return (
+                    <button
+                      key={mechanic._id}
+                      type="button"
+                      className={`map-marker ${markerClasses[index]}`}
+                      onClick={() => setSelectedId(mechanic._id)}
+                      aria-label={`Select ${mechanic.businessName}`}
+                    >
+                      {index === 1 ? (
+                        <Truck size={16} />
+                      ) : index === 3 ? (
+                        <BatteryCharging size={16} />
+                      ) : (
+                        <Wrench size={16} />
+                      )}
+                    </button>
+                  );
+                })}
 
                 <div className="map-current-location">
                   <span />
@@ -366,18 +371,24 @@ function FindMechanic() {
                   <div className="map-mechanic-popup">
                     <div className="popup-topline">
                       <span className="fast-responder">
-                        Fastest Responder
+                        Mechanic Details
                       </span>
                       <span className="popup-rating">
-                        <Star size={12} fill="currentColor" />
-                        {selectedMechanic.rating}
+                        <Star size={12} />
+                        {selectedMechanic.experience || 0} years
                       </span>
                     </div>
 
-                    <h3>{selectedMechanic.name}</h3>
+                    <h3>{selectedMechanic.businessName}</h3>
+
                     <p>
-                      OMR Corridor · <strong>{selectedMechanic.eta}</strong>
-                      {" "}({selectedMechanic.distance})
+                      {selectedMechanic.location?.address || "Address not available"}
+                      {" · "}
+                      <strong>
+                        {selectedMechanic.isAvailable
+                          ? "Available"
+                          : "Unavailable"}
+                      </strong>
                     </p>
 
                     <button
@@ -385,7 +396,7 @@ function FindMechanic() {
                       onClick={() => handleDispatch(selectedMechanic)}
                     >
                       <Zap size={13} />
-                      Instant Dispatch
+                      Request Dispatch
                     </button>
                   </div>
                 )}
@@ -398,6 +409,7 @@ function FindMechanic() {
                   >
                     <Plus size={18} />
                   </button>
+
                   <button
                     type="button"
                     onClick={() => setZoom((value) => Math.max(value - 0.1, 0.8))}
@@ -405,13 +417,15 @@ function FindMechanic() {
                   >
                     <Minus size={18} />
                   </button>
+
                   <button
                     type="button"
-                    onClick={() => setSelectedId(1)}
+                    onClick={() => setSelectedId(filteredMechanics[0]?._id || null)}
                     aria-label="Reset map selection"
                   >
                     <LocateFixed size={17} />
                   </button>
+
                   <button
                     type="button"
                     onClick={() => alert("Connect a real map provider to use map layers.")}
@@ -449,16 +463,16 @@ function FindMechanic() {
               <div>
                 <ShieldCheck size={17} />
                 <span>
-                  <strong>Identity Verified</strong>
-                  <small>Checked profiles</small>
+                  <strong>Mechanic Profiles</strong>
+                  <small>Profile information</small>
                 </span>
               </div>
 
               <div>
                 <CheckCircle2 size={17} />
                 <span>
-                  <strong>No Surprise Pricing</strong>
-                  <small>Transparent estimates</small>
+                  <strong>Service Information</strong>
+                  <small>Available services</small>
                 </span>
               </div>
             </div>
@@ -470,14 +484,3 @@ function FindMechanic() {
 }
 
 export default FindMechanic;
-
-
-
-// request 
-
-// quotation 
-// onway
-
-// completed 
-// payment 
-// review

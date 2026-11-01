@@ -3,7 +3,7 @@ import cors from "cors";
 import authRoutes from "./routes/authRoutes.js";
 import serviceRequestRoutes from "./routes/serviceRequestRoutes.js";
 import dashboardRoutes from "./routes/dashboardRoutes.js";
-
+import mechanicRoutes from "./routes/mechanicRoutes.js";
 const app = express();
 
 //Middlewaree
@@ -20,6 +20,8 @@ app.get("/",(req,res)=>{
 app.use("/api/auth",authRoutes);
 //Dashboard routes
 app.use("/api/dashboard", dashboardRoutes);
+// Mechanic routes
+app.use("/api/mechanics", mechanicRoutes);
 
 //request auth
 app.use("/api/service-requests", serviceRequestRoutes);
