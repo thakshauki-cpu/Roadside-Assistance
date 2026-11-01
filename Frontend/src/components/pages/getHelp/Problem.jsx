@@ -85,18 +85,75 @@ function Problem() {
   // Text typed by the user in the description box
   const [description, setDescription] = useState("");
 
+  // True while the request is being submitted to the backend
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState("");
+
   // Save this step's data and go to the next page
-  const handleContinue = () => {
-    const updated = {
-      ...saved,
-      issue: selected,
-      issueDescription: description,
-    };
-    localStorage.setItem("serviceRequest", JSON.stringify(updated));
+  const handleContinue = async () => {
+  try {
+    setIsSubmitting(true);
+    setError("");
 
+    // Get saved data from previous steps
+    const saved =
+      JSON.parse(localStorage.getItem("serviceRequest")) || {};
+
+    // Get JWT token
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      setError("Please login again.");
+      return;
+    }
+
+    // Check previous step data
+    if (!saved.location?.address || !saved.vehicle?.vehicleType) {
+      setError("Location or vehicle details are missing.");
+      return;
+    }
+
+    
+    // Send data to Backend
+    const response = await fetch(
+      `${import.meta.env.VITE_API_URL}/api/service-requests`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          location: saved.location,
+          vehicle: saved.vehicle,
+          problem: selected,
+          description: description,
+        }),
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || "Failed to create service request.");
+    }
+
+    // Save created request
+    localStorage.setItem(
+      "createdServiceRequest",
+      JSON.stringify(data.serviceRequest)
+    );
+
+    // Go to next page
     navigate("/get-help/mechanic-found");
-  };
 
+  } catch (error) {
+    console.error("Service Request Error:", error);
+    setError(error.message);
+  } finally {
+    setIsSubmitting(false);
+  }
+};
   return (
     <div className="gethelp-page">
       <DashboardSidebar activeItem="My Requests" />
@@ -109,9 +166,10 @@ function Problem() {
           <div className="summary-strip">
             <span className="summary-chip">Batticaloa Dispatch</span>
             <span>
-              {saved.model || "Toyota Axio"} ({saved.plate || "EP CAB 1234"})
+              {saved.vehicle?.model || "Vehicle model not provided"} 
+               ({saved.vehicle?.registrationNumber || "No plate number"})
             </span>
-            <span>{saved.landmark || "Kallady Corridor bypass"}</span>
+            <span>{saved.location?.landmark || "Location not selected"}</span>
             <strong className="summary-step">Step 3 of 6</strong>
           </div>
 
@@ -191,6 +249,9 @@ function Problem() {
               roadside operator only.
             </p>
           </section>
+          {error && ( <p className="form-error">{error}
+            </p>
+          )}
 
           {/* Info banner */}
           <section className="standards-banner">
@@ -219,10 +280,16 @@ function Problem() {
             </button>
 
             <div className="gh-bottom-right">
-              <button type="button" className="gh-next-button" onClick={handleContinue}>
-                Find Nearby Mechanic
-                <ArrowRight size={16} />
-              </button>
+              <button
+  type="button"
+  className="gh-next-button"
+  onClick={handleContinue}
+  disabled={isSubmitting}
+>
+  {isSubmitting ? "Submitting..." : "Find Nearby Mechanic"}
+
+  {!isSubmitting && <ArrowRight size={16} />}
+</button>
             </div>
           </div>
         </div>

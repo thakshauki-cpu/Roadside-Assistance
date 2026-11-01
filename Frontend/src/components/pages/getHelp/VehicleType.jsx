@@ -93,13 +93,32 @@ function VehicleType() {
     setApplied(true);
   };
 
-  const handleContinue = () => {
-    const saved = JSON.parse(localStorage.getItem("serviceRequest")) || {};
-    const updated = { ...saved, vehicleType: selected, plate: plate, model: model };
-    localStorage.setItem("serviceRequest", JSON.stringify(updated));
+const handleContinue = () => {
+  const saved =
+    JSON.parse(localStorage.getItem("serviceRequest")) || {};
 
-    navigate("/get-help/problem");
+  // Match frontend vehicle names with backend enum values
+  const vehicleType =
+    selected === "Motorbike"
+      ? "Bike"
+      : selected === "Three-Wheeler"
+      ? "Three Wheeler"
+      : selected;
+
+  const updated = {
+    ...saved,
+
+    vehicle: {
+      vehicleType,
+      model: model.trim(),
+      registrationNumber: plate.trim().toUpperCase(),
+    },
   };
+
+  localStorage.setItem("serviceRequest", JSON.stringify(updated));
+
+  navigate("/get-help/problem");
+};
 
   return (
     <div className="gethelp-page">
