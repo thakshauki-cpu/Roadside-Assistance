@@ -1,57 +1,156 @@
 
+import { useEffect, useState } from "react";
+
 import {
   ArrowRight,
   BellRing,
   CheckCircle,
-  Clock,
   Fuel,
   MapPin,
   Navigation,
   PhoneCall,
-  ShieldCheck,
   Star,
   Wrench,
   History,
-  Truck,
   Sparkles,
-  CircleHelp,
+  CarFront,
+  Clock,
+  ClipboardList,
 } from "lucide-react";
 
 import "./Welcome.css";
-
 import { useNavigate } from "react-router-dom";
 
 function WelcomeSection() {
+  const navigate = useNavigate();
 
-    // localStorage keeps data as text, so JSON.parse turns it back into an object
-  const user = JSON.parse(localStorage.getItem("user"));
+  // Dashboard data states
+  const [dashboardData, setDashboardData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  // fullName is "John Doe", split(" ") makes ["John", "Doe"], [0] takes "John"
-  // If no user is saved, firstName is an empty text
-  const firstName = user ? user.fullName.split(" ")[0] : "";
+  // Get dashboard data from backend
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        const token = localStorage.getItem("token");
 
-   const navigate = useNavigate();
+        if (!token) {
+          setError("Please login to view your dashboard.");
+          setLoading(false);
+          return;
+        }
+
+        const response = await fetch(
+          `${import.meta.env.VITE_API_URL}/api/dashboard`,
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || "Failed to load dashboard");
+        }
+
+        setDashboardData(data);
+      } catch (err) {
+        setError(err.message || "Something went wrong");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
+
+  // Loading state
+  if (loading) {
+    return (
+      <section className="welcome-dashboard">
+        <p>Loading your dashboard...</p>
+      </section>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <section className="welcome-dashboard">
+        <p>{error}</p>
+        <button onClick={() => window.location.reload()}>
+          Try Again
+        </button>
+      </section>
+    );
+  }
+
+  if (!dashboardData) return null;
+
+  // Backend data
+  const {
+    customer,
+    overview,
+    primaryVehicle,
+    activeRequest,
+    recentRequests,
+    nearbyMechanics,
+  } = dashboardData;
+
+  const firstName = customer?.fullName?.split(" ")[0] || "Customer";
+
+  // Use active request first, otherwise latest history
+  const recentRequest = activeRequest || recentRequests?.[0] || null;
+
+  // Format date
+  const formatDate = (date) => {
+    if (!date) return "Date unavailable";
+
+    return new Date(date).toLocaleString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  // Format request status
+  const formatStatus = (status) => {
+    if (!status) return "Unknown";
+
+    return status
+      .replaceAll("_", " ")
+      .replace(/\b\w/g, (letter) => letter.toUpperCase());
+  };
+
   return (
     <section className="welcome-dashboard">
+
       {/* Greeting */}
       <div className="dashboard-greeting">
         <b>
           Welcome,
-          <br /><br/>
+          <br /><br />
           {firstName}!
         </b>
       </div>
 
       {/* Top cards */}
       <div className="welcome-top-grid">
+
         {/* Roadside assistance banner */}
         <section className="roadside-banner">
           <div className="roadside-banner-content">
             <h2>
               Get Help –
-              <br/>
+              <br />
               Roadside assistance
-            <br/>
+              <br />
               when you need it
             </h2>
 
@@ -65,9 +164,8 @@ function WelcomeSection() {
             <button
               type="button"
               className="get-help-button"
-               onClick={() => navigate("/get-help/location")}
+              onClick={() => navigate("/get-help/location")}
             >
-              
               <span>
                 Get Help
                 <br />
@@ -79,7 +177,7 @@ function WelcomeSection() {
 
           <div className="roadside-banner-image">
             <img
-              src="src/assets/front map.PNG"
+              src="/src/assets/front map.PNG"
               alt="Vehicle roadside assistance"
             />
           </div>
@@ -87,74 +185,90 @@ function WelcomeSection() {
 
         {/* Vehicle card */}
         <section className="vehicle-card">
+
           <div className="vehicle-card-heading">
             <div className="vehicle-title">
               <h3>Your Vehicle</h3>
-              <span className="primary-badge">Primary</span>
+
+              {primaryVehicle && (
+                <span className="primary-badge">
+                  {primaryVehicle.isPrimary ? "Primary" : "Latest"}
+                </span>
+              )}
             </div>
 
             <button
               type="button"
               className="switch-vehicle-button"
+              onClick={() => navigate("/get-help/vehicle")}
             >
               ↔ Switch
             </button>
           </div>
 
-          <div className="vehicle-details">
-            <div>
-              <h4>Toyota Corolla</h4>
-              <h4>Altis</h4>
-              <p>1.8 VLT Petrol • Royal Blue</p>
-            </div>
+          {primaryVehicle ? (
+            <>
+              <div className="vehicle-details">
+                <div>
+                  <h4>{primaryVehicle.model}</h4>
+                  <p>{primaryVehicle.vehicleType}</p>
+                </div>
 
-            <div className="vehicle-plate">
-              <span className="plate-country">IND</span>
-              <span>TN 07 AB<br />1234</span>
-            </div>
-          </div>
-{/* 
-          <div className="vehicle-image">
-            <img
-              src="/src/assets/Car.PNG"
-              alt="Blue car"
-            />
+                <div className="vehicle-plate">
+                  <span className="plate-country">LK</span>
+                  <span>
+                    {primaryVehicle.registrationNumber || "Not added"}
+                  </span>
+                </div>
+              </div>
 
-            <span className="vehicle-status">
-              <CheckCircle size={11} />
-              Connected OBD-II Active
-            </span>
-          </div> */}
+              <div className="vehicle-image">
+                <img
+                  src="/src/assets/Car.PNG"
+                  alt="Customer vehicle"
+                />
+              </div>
 
-          <div className="vehicle-info-strip">
-            <div>
-              <span>Fuel Type</span>
-              <strong>
-                <Fuel size={12} />
-                Petrol (91)
-              </strong>
-            </div>
+              <div className="vehicle-info-strip">
+                <div>
+                  <span>Vehicle Type</span>
+                  <strong>
+                    <CarFront size={12} />
+                    {primaryVehicle.vehicleType}
+                  </strong>
+                </div>
 
-            <div>
-              <span>Last Serviced</span>
-              <strong>28 Feb 2025</strong>
+                <div>
+                  <span>Added On</span>
+                  <strong>
+                    {formatDate(primaryVehicle.createdAt).split(",")[0]}
+                  </strong>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="vehicle-details">
+              <div>
+                <h4>No Vehicle Added</h4>
+                <p>Add your vehicle details to get started.</p>
+                <button
+                  type="button"
+                  onClick={() => navigate("/get-help/vehicle")}
+                >
+                  Add Vehicle
+                </button>
+              </div>
             </div>
-
-            <div>
-              <span>Insurance</span>
-              <strong className="insurance-active">
-                <CheckCircle size={12} />
-                Dec 2025
-              </strong>
-            </div>
-          </div>
+          )}
         </section>
       </div>
 
       {/* Bottom cards */}
       <div className="welcome-bottom-grid">
+
         {/* Recent request */}
         <section className="dashboard-card recent-request-card">
+
           <div className="dashboard-card-heading">
             <div className="dashboard-heading-title">
               <span className="dashboard-heading-icon">
@@ -163,111 +277,134 @@ function WelcomeSection() {
               <h3>Recent Request</h3>
             </div>
 
-            <button type="button" className="text-action">
-              History
+            <button
+              type="button"
+              className="text-action"
+              onClick={() => navigate("/get-help/location")}
+            >
+              New Request
             </button>
           </div>
 
-          <div className="request-details-box">
-            <div className="request-title-row">
-              <h4>
-                Tyre Puncture
-                <br />
-                Repair
-              </h4>
-              <span className="completed-badge">
-                ● Completed
-              </span>
-            </div>
+          {recentRequest ? (
+            <>
+              <div className="request-details-box">
 
-            <p className="request-date">
-              12 Apr 2025 · 03:45 PM
-            </p>
+                <div className="request-title-row">
+                  <h4>{recentRequest.problem}</h4>
 
-            <div className="request-mechanic">
-              <ShieldCheck size={13} />
-              <strong>Karthik Service Hub</strong>
-            </div>
+                  <span className="completed-badge">
+                    ● {formatStatus(recentRequest.status)}
+                  </span>
+                </div>
 
-            <div className="request-rating">
-              <span>You rated this service</span>
-              <div aria-label="5 out of 5 stars">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <Star
-                    key={star}
-                    size={13}
-                    fill="currentColor"
-                  />
-                ))}
+                <p className="request-date">
+                  {formatDate(recentRequest.createdAt)}
+                </p>
+
+                <div className="request-mechanic">
+                  <MapPin size={13} />
+                  <strong>
+                    {recentRequest.location?.address || "Location unavailable"}
+                  </strong>
+                </div>
+
+                {recentRequest.mechanic && (
+                  <div className="request-mechanic">
+                    <Wrench size={13} />
+                    <strong>
+                      {recentRequest.mechanic.fullName}
+                    </strong>
+                  </div>
+                )}
+
+                <div className="request-rating">
+                  <span>
+                    {recentRequest.description || "Service request details"}
+                  </span>
+                </div>
+
               </div>
-            </div>
-          </div>
 
-          <button
-            type="button"
-            className="invoice-button"
-          >
-            View Invoice &amp; Inspection Report
-            <ArrowRight size={14} />
-          </button>
+              <button
+                type="button"
+                className="invoice-button"
+                onClick={() =>
+                  navigate(
+                    activeRequest
+                      ? "/get-help/tracking"
+                      : "/get-help/summary"
+                  )
+                }
+              >
+                {activeRequest ? "Track Request" : "View Request Details"}
+                <ArrowRight size={14} />
+              </button>
+            </>
+          ) : (
+            <div className="request-details-box">
+              <h4>No Service Requests Yet</h4>
+              <p>Create your first roadside assistance request.</p>
+            </div>
+          )}
         </section>
 
         {/* Nearby mechanics */}
         <section className="dashboard-card nearby-mechanics-card">
+
           <div className="dashboard-card-heading">
             <div className="dashboard-heading-title">
               <span className="dashboard-heading-icon">
                 <Navigation size={16} />
               </span>
-              <h3>
-                Nearby
-             
-                Mechanics
-              </h3>
+              <h3>Nearby Mechanics</h3>
             </div>
 
             <span className="active-mechanics-count">
-              ● 7 Active in 3km
+              ● {nearbyMechanics.length} Available
             </span>
           </div>
 
-          <div className="mechanic-details-box">
-            <div className="mechanic-name-row">
-              <h4>Mike's Roadside Service</h4>
-              <span className="available-badge">
-                ● Available
-              </span>
-            </div>
+          {nearbyMechanics.length > 0 ? (
+            nearbyMechanics.slice(0, 3).map((mechanic) => (
+              <div
+                className="mechanic-details-box"
+                key={mechanic._id}
+              >
+                <div className="mechanic-name-row">
+                  <h4>{mechanic.businessName}</h4>
 
-            <div className="mechanic-rating">
-              <Star size={13} fill="currentColor" />
-              <strong>4.9</strong>
-              <span>(128 reviews)</span>
-            </div>
+                  <span className="available-badge">
+                    ● Available
+                  </span>
+                </div>
 
-            <div className="mechanic-distance">
-              <MapPin size={13} />
-              <span>1.4 km away</span>
-            </div>
+                <div className="mechanic-distance">
+                  <MapPin size={13} />
+                  <span>
+                    {mechanic.location?.address || "Location unavailable"}
+                  </span>
+                </div>
 
-            <div className="mechanic-tags">
-              <span>RoadMate Certified</span>
-              <span>Flatbed &amp; Wheel Lift</span>
+                <div className="mechanic-tags">
+                  {mechanic.services?.slice(0, 3).map((service) => (
+                    <span key={service}>{service}</span>
+                  ))}
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="mechanic-details-box">
+              <h4>No Mechanics Available</h4>
+              <p>Available mechanics will appear here.</p>
             </div>
-
-            <button
-              type="button"
-              className="dispatch-button"
-            >
-              <PhoneCall size={14} />
-              Request Dispatch
-            </button>
-          </div>
+          )}
 
           <button
             type="button"
             className="view-mechanics-button"
             aria-label="View more mechanics"
+            onClick={() => navigate("/find-mechanic")}
           >
             <ArrowRight size={16} />
           </button>
@@ -275,6 +412,7 @@ function WelcomeSection() {
 
         {/* Recent alerts */}
         <section className="dashboard-card recent-alerts-card">
+
           <div className="dashboard-card-heading">
             <div className="dashboard-heading-title">
               <span className="dashboard-heading-icon">
@@ -282,42 +420,23 @@ function WelcomeSection() {
               </span>
               <h3>Recent Alerts</h3>
             </div>
-
-            <button type="button" className="text-action">
-              Mark all read
-            </button>
-          </div>
-
-          <div className="alert-item">
-            <span className="alert-icon alert-success">
-              <CheckCircle size={15} />
-            </span>
-
-            <div className="alert-content">
-              <h4>Mechanic Arrived Safely</h4>
-              <p>
-                Karthik completed your tyre inspection.
-              </p>
-              <span>2 hours ago</span>
-            </div>
           </div>
 
           <div className="alert-item">
             <span className="alert-icon alert-service">
-              <Wrench size={15} />
+              <Clock size={15} />
             </span>
 
             <div className="alert-content">
-              <h4>Service Request Confirmed</h4>
-              <p>Flatbed towing booked #RM-8921</p>
-              <span>12 Apr, 03:20 PM</span>
+              <h4>Notifications Coming Soon</h4>
+              <p>
+                Your service updates and notifications will appear here.
+              </p>
             </div>
           </div>
 
           <div className="road-advice">
-            <span>
-              Need road advice?
-            </span>
+            <span>Need road advice?</span>
 
             <button type="button">
               Ask RoadMate AI
@@ -325,6 +444,7 @@ function WelcomeSection() {
             </button>
           </div>
         </section>
+
       </div>
     </section>
   );
