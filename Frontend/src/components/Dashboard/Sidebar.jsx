@@ -41,16 +41,16 @@ const menuItems = [
     icon: UserRound,
     path: "/profile",
   },
-  {
-    label: "Settings",
-    icon: Settings,
-    path: "/settings",
-  },
-  {
-    label: "Help & Support",
-    icon: CircleHelp,
-    path: "/help",
-  },
+  // {
+  //   label: "Settings",
+  //   icon: Settings,
+  //   path: "/settings",
+  // },
+  // {
+  //   label: "Help & Support",
+  //   icon: CircleHelp,
+  //   path: "/help",
+  // },
 ];
 
 function DashboardSidebar({ activeItem = "Dashboard" }) {

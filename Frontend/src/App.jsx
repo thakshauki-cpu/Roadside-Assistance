@@ -15,6 +15,12 @@ import MechanicFound from "./components/pages/getHelp/MechanicFound";
 import Tracking from "./components/pages/getHelp/Tracking";
 import Summary from "./components/pages/getHelp/Summary";
 
+
+
+
+import MechanicRegisterPage from "./components/pages/Mechanic/MechanicRegisterPage";
+
+
 function App() {
   return(
     <>
@@ -23,6 +29,13 @@ function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage/>}/>
+        <Route
+  path="/mechanic-register"
+  element={<MechanicRegisterPage />}
+/>
+
+
+
         <Route
   path="/dashboard"
   element={
@@ -101,6 +114,12 @@ function App() {
     </ProtectedRoute>
   }
 />
+
+
+
+
+
+
 
 
 

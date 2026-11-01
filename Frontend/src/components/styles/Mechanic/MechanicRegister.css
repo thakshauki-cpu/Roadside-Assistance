@@ -1,0 +1,370 @@
+.mechanic-register-page {
+  min-height: 100vh;
+  background: #f5f8ff;
+  color: #102b59;
+  font-family: inherit;
+}
+
+.mechanic-register-header {
+  min-height: 76px;
+  padding: 12px 7%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #ffffff;
+  border-bottom: 1px solid #e8edf7;
+}
+
+.mechanic-register-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #0645df;
+  text-decoration: none;
+}
+
+.mechanic-register-brand span {
+  display: flex;
+  flex-direction: column;
+}
+
+.mechanic-register-brand strong {
+  color: #102b59;
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.mechanic-register-brand small {
+  color: #687895;
+  font-size: 11px;
+}
+
+.mechanic-header-login {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.mechanic-header-login a {
+  padding: 10px 20px;
+  border: 1px solid #285cff;
+  border-radius: 9px;
+  color: #285cff;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.mechanic-header-login a:hover {
+  background: #285cff;
+  color: #ffffff;
+}
+
+.mechanic-register-container {
+  width: 100%;
+  padding: 40px 20px;
+  display: flex;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.mechanic-register-card {
+  width: 100%;
+  max-width: 760px;
+  padding: 38px 48px;
+  background: #ffffff;
+  border: 1px solid #e6ecf7;
+  border-radius: 14px;
+  box-shadow: 0 12px 35px rgba(25, 65, 130, 0.07);
+  box-sizing: border-box;
+}
+
+.mechanic-form-heading {
+  margin-bottom: 30px;
+}
+
+.mechanic-form-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 15px;
+  border-radius: 20px;
+  background: #eaf1ff;
+  color: #285cff;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.mechanic-form-heading h1 {
+  margin: 18px 0 8px;
+  color: #102b59;
+  font-size: 29px;
+  font-weight: 750;
+}
+
+.mechanic-form-heading p {
+  margin: 0;
+  color: #687895;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.mechanic-form-section {
+  margin-top: 28px;
+  padding-bottom: 22px;
+  border-bottom: 1px solid #e7edf6;
+}
+
+.mechanic-form-section h3 {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin: 0 0 19px;
+  color: #123b7b;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.mechanic-form-section h3 svg {
+  color: #0645df;
+}
+
+.mechanic-field {
+  margin-bottom: 17px;
+}
+
+.mechanic-field:last-child {
+  margin-bottom: 0;
+}
+
+.mechanic-field label {
+  display: block;
+  margin-bottom: 8px;
+  color: #344b70;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.mechanic-input-wrapper {
+  min-height: 43px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 0 12px;
+  border: 1px solid #d8e2f2;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #7185a5;
+  box-sizing: border-box;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.mechanic-input-wrapper:focus-within {
+  border-color: #285cff;
+  box-shadow: 0 0 0 3px rgba(40, 92, 255, 0.08);
+}
+
+.mechanic-input-wrapper > svg {
+  flex-shrink: 0;
+}
+
+.mechanic-input-wrapper input {
+  width: 100%;
+  min-width: 0;
+  height: 41px;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: #102b59;
+  font-family: inherit;
+  font-size: 13px;
+}
+
+.mechanic-input-wrapper input::placeholder {
+  color: #8da0bd;
+}
+
+.mechanic-input-wrapper input::-webkit-inner-spin-button,
+.mechanic-input-wrapper input::-webkit-outer-spin-button {
+  margin: 0;
+}
+
+.mechanic-password-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px;
+  border: none;
+  background: transparent;
+  color: #7185a5;
+  cursor: pointer;
+}
+
+.mechanic-password-toggle:hover {
+  color: #285cff;
+}
+
+.mechanic-section-description {
+  margin: -8px 0 14px;
+  color: #71809a;
+  font-size: 13px;
+}
+
+.mechanic-services-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px 12px;
+}
+
+.mechanic-service-option {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border: 1px solid #dce5f3;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #344b70;
+  font-size: 12px;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: 0.2s;
+}
+
+.mechanic-service-option:hover,
+.mechanic-service-option.selected {
+  border-color: #285cff;
+  background: #f2f6ff;
+  color: #1748c9;
+}
+
+.mechanic-service-option input {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: #285cff;
+  cursor: pointer;
+}
+
+.mechanic-coordinate-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.mechanic-location-note {
+  margin: -5px 0 0;
+  color: #7b8ba5;
+  font-size: 11px;
+}
+
+.mechanic-terms {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 23px 0;
+  color: #526582;
+  font-size: 12px;
+  line-height: 1.6;
+  cursor: pointer;
+}
+
+.mechanic-terms input {
+  width: 17px;
+  height: 17px;
+  margin: 1px 0 0;
+  accent-color: #285cff;
+  flex-shrink: 0;
+}
+
+.mechanic-terms a {
+  color: #0645df;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.mechanic-terms a:hover {
+  text-decoration: underline;
+}
+
+.mechanic-register-error {
+  margin: 0 0 15px;
+  padding: 11px 13px;
+  border-radius: 7px;
+  background: #fff0f0;
+  color: #d32f2f;
+  font-size: 13px;
+}
+
+.mechanic-register-submit {
+  width: 100%;
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  border: none;
+  border-radius: 9px;
+  background: #285cff;
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.mechanic-register-submit:hover {
+  background: #1747d1;
+}
+
+.mechanic-register-submit:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.mechanic-register-bottom {
+  margin: 20px 0 0;
+  color: #71809a;
+  text-align: center;
+  font-size: 13px;
+}
+
+.mechanic-register-bottom a {
+  color: #285cff;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+@media (max-width: 600px) {
+  .mechanic-register-header {
+    padding: 12px 18px;
+  }
+
+  .mechanic-register-brand strong {
+    font-size: 20px;
+  }
+
+  .mechanic-header-login span {
+    display: none;
+  }
+
+  .mechanic-register-container {
+    padding: 20px 12px;
+  }
+
+  .mechanic-register-card {
+    padding: 25px 18px;
+  }
+
+  .mechanic-form-heading h1 {
+    font-size: 24px;
+  }
+
+  .mechanic-services-grid,
+  .mechanic-coordinate-grid {
+    grid-template-columns: 1fr;
+  }
+}

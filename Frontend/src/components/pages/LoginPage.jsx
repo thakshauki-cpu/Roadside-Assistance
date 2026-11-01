@@ -197,10 +197,19 @@ const handleLogin = async (event) => {
 
         </form>
 
-        <p className="create-account-text">
+        <div className="create-account-text">
+  Don't have an account?{" "}
+  {role === "customer" ? (
+    <Link to="/register">Register as Customer</Link>
+  ) : (
+    <Link to="/mechanic-register">Register as Mechanic</Link>
+  )}
+</div>
+
+        {/* <p className="create-account-text">
           New customer stranded on road?
           <Link to="/register">Create account</Link>
-        </p>
+        </p> */}
 
         <div className="emergency-card">
           <div className="emergency-icon">

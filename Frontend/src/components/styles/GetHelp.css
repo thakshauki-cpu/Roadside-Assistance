@@ -1441,3 +1441,37 @@ vechile type card */
     grid-template-columns: 1fr;
   }
 }
+
+
+/* location placeholdermap adding */
+/* Leaflet Map */
+.leaflet-map {
+  width: 100%;
+  height: 480px;
+  border-radius: 12px;
+  z-index: 1;
+}
+
+.map-box {
+  position: relative;
+  overflow: hidden;
+}
+
+.map-toggle {
+  padding: 14px;
+  background: #ffffff;
+  font-weight: 600;
+  color: #243047;
+}
+
+.map-info {
+  position: relative;
+  z-index: 2;
+}
+
+/* loading mseesage showing in address input */
+.location-loading {
+  color: #285cff;
+  font-size: 13px;
+  margin-top: 8px;
+}

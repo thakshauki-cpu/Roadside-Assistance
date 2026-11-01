@@ -14,13 +14,23 @@ import {
   TrafficCone,
   CarFront,
 } from "lucide-react";
+import {
+  MapContainer,
+  TileLayer,
+  CircleMarker,
+  useMapEvents,
+} from "react-leaflet";
+
+
 
 import DashboardSidebar from "../../Dashboard/Sidebar";
 import DashboardTopbar from "../../Dashboard/Topbar";
 import RequestStepper from "../../gethelp/RequestStepper";
 import "../../styles/GetHelp.css";
+import "leaflet/dist/leaflet.css";
 
 // Landmark choices for the dropdown
+// when a customer click the location  it will show the latitude and logitude
 const landmarks = [
   "Kallady Bridge (Lady Manning Bridge)",
   "Batticaloa Bus Stand",
@@ -28,35 +38,109 @@ const landmarks = [
   "Gandhi Park",
   "Puliyanthivu Junction",
 ];
-
 function Location() {
   const navigate = useNavigate();
+
+  //show loading status before  to find api address
+  const [isAddressLoading, setIsAddressLoading] = useState(false);
 
   // Values typed or chosen by the user
   const [address, setAddress] = useState("A15 Highway near Kallady Bridge, Batticaloa");
   const [landmark, setLandmark] = useState(landmarks[0]);
   const [details, setDetails] = useState("");
 
+  //this the start point of batticaloa map position when customer clck the other location logtitude and latitude will change
+  const [coordinates, setCoordinates] = useState({
+    latitude: 7.7102,
+    longitude: 81.6924,
+  });
+
   // "street" or "satellite" (only changes the button highlight for now)
   const [mapMode, setMapMode] = useState("street");
+  const [locationError, setLocationError] = useState("");
 
-  // Real GPS will be added later. For now we fill a sample text.
-  const handleUseCurrentLocation = () => {
-    setAddress("Current GPS location (Batticaloa)");
+  // when customer click the place address will find and it will shown in address input
+  const handleMapLocationSelect = async (newCoordinates) => {
+    // Update latitude and longitude
+    setCoordinates(newCoordinates);
+
+    // Start loading
+    setIsAddressLoading(true);
+    setLocationError("");
+
+    try {
+      // api connecting
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${newCoordinates.latitude}&lon=${newCoordinates.longitude}`
+      );
+
+      if (!response.ok) {
+        throw new Error("Unable to find the address.");
+      }
+
+      const data = await response.json();
+
+      if (data.display_name) {
+        setAddress(data.display_name);
+      } else {
+        setLocationError("Address not found. Please enter it manually.");
+      }
+    } catch (error) {
+      console.error("Reverse Geocoding Error:", error);
+      setLocationError("Unable to find address. Please enter it manually.");
+    } finally {
+      setIsAddressLoading(false);
+    }
   };
 
-  // Save this step's data and go to the next page
+  const handleUseCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      setLocationError("Geolocation is not supported by this browser.");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const nextCoordinates = {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        };
+
+        setCoordinates(nextCoordinates);
+        setAddress("Current location");
+        setLocationError("");
+      },
+      () => {
+        setLocationError("Unable to access your current location. Please enter it manually.");
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
+  // Save this step's data and go to the next page longtitude latitude order save
   const handleContinue = () => {
-    // Read old request data (or an empty object if nothing is saved)
+    if (!address.trim()) {
+      setLocationError("Please enter or select a valid location before continuing.");
+      return;
+    }
+
+    setLocationError("");
+
     const saved = JSON.parse(localStorage.getItem("serviceRequest")) || {};
 
-    // "...saved" copies the old data, then we add the new fields
-    const updated = { ...saved, address: address, landmark: landmark, details: details };
-    localStorage.setItem("serviceRequest", JSON.stringify(updated));
+    const updated = {
+      ...saved,
+      location: {
+        address: address.trim(),
+        landmark,
+        details,
+        coordinates: [coordinates.longitude, coordinates.latitude],
+      },
+    };
 
+    localStorage.setItem("serviceRequest", JSON.stringify(updated));
     navigate("/get-help/vehicle");
   };
-
   return (
     <div className="gethelp-page">
       {/* activeItem highlights "My Requests" in the sidebar */}
@@ -121,6 +205,12 @@ function Location() {
                     value={address}
                     onChange={(event) => setAddress(event.target.value)}
                   />
+                  {/* to show the loding message in address input */}
+                  {isAddressLoading && (
+                    <p className="location-loading">
+                      Finding address...
+                    </p>
+                  )}
                   {/* X button clears the address */}
                   <button type="button" className="gh-clear" onClick={() => setAddress("")}>
                     <X size={15} />
@@ -169,6 +259,10 @@ function Location() {
                 /> */}
               </section>
 
+              {locationError && (
+                <p className="location-error">{locationError}</p>
+              )}
+
               {/* Emergency card */}
               <section className="danger-card">
                 <span className="danger-icon">
@@ -188,50 +282,65 @@ function Location() {
             {/* ===== Right column: map ===== */}
             <div className="location-right">
               {/* Placeholder map. A real map will be added later. */}
+
+
               <div className="map-box">
+
                 <div className="map-toggle">
-                  <button
-                    type="button"
-                    className={mapMode === "street" ? "selected" : ""}
-                    onClick={() => setMapMode("street")}
-                  >
-                    Street Vector
-                  </button>
-                  <button
-                    type="button"
-                    className={mapMode === "satellite" ? "selected" : ""}
-                    onClick={() => setMapMode("satellite")}
-                  >
-                    Satellite
-                  </button>
+                  <span>Select Your Breakdown Location</span>
                 </div>
 
-                <div className="map-road" />
-                <div className="map-pin">
-                  <Navigation size={13} /> Your Breakdown Location
-                </div>
+                <MapContainer
+                  center={[7.7102, 81.6924]}
+                  zoom={15}
+                  scrollWheelZoom={true}
+                  className="leaflet-map"
+                >
+                  <TileLayer
+                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  />
 
-                <div className="map-zoom">
-                  <button type="button" aria-label="Zoom in">
-                    <Plus size={16} />
-                  </button>
-                  <button type="button" aria-label="Zoom out">
-                    <Minus size={16} />
-                  </button>
-                </div>
+                  <MapClickHandler
+                    onLocationSelect={handleMapLocationSelect}
+                  />
+
+                  <CircleMarker
+                    center={[
+                      coordinates.latitude,
+                      coordinates.longitude,
+                    ]}
+                    radius={9}
+                    pathOptions={{
+                      color: "#ffffff",
+                      fillColor: "#285cff",
+                      fillOpacity: 1,
+                      weight: 3,
+                    }}
+                  />
+                </MapContainer>
 
                 <div className="map-info">
                   <span className="map-info-icon">
                     <Navigation size={18} />
                   </span>
+
                   <div>
-                    <strong>Kallady Bridge Causeway, Batticaloa</strong>
-                    <p>3 Mechanics within 3 km • Fastest ETA: 12 mins</p>
+                    <strong>Selected Location</strong>
+                    <p>
+                      Latitude: {coordinates.latitude.toFixed(5)}
+                    </p>
+                    <p>
+                      Longitude: {coordinates.longitude.toFixed(5)}
+                    </p>
                   </div>
                 </div>
+
               </div>
 
-              
+
+
+
             </div>
           </div>
 
@@ -254,6 +363,17 @@ function Location() {
       </main>
     </div>
   );
+}
+
+function MapClickHandler({ onLocationSelect }) {
+  useMapEvents({
+    click(event) {
+      const { lat, lng } = event.latlng;
+      onLocationSelect({ latitude: lat, longitude: lng });
+    },
+  });
+
+  return null;
 }
 
 export default Location;
