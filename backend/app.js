@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 import authRoutes from "./routes/authRoutes.js";
 import serviceRequestRoutes from "./routes/serviceRequestRoutes.js";
-
+import dashboardRoutes from "./routes/dashboardRoutes.js";
 
 const app = express();
 
@@ -18,6 +18,8 @@ app.get("/",(req,res)=>{
 
 //Auth routes
 app.use("/api/auth",authRoutes);
+//Dashboard routes
+app.use("/api/dashboard", dashboardRoutes);
 
 //request auth
 app.use("/api/service-requests", serviceRequestRoutes);

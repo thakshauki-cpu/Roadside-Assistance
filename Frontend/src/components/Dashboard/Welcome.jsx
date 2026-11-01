@@ -113,7 +113,7 @@ function WelcomeSection() {
               <span>TN 07 AB<br />1234</span>
             </div>
           </div>
-
+{/* 
           <div className="vehicle-image">
             <img
               src="/src/assets/Car.PNG"
@@ -124,7 +124,7 @@ function WelcomeSection() {
               <CheckCircle size={11} />
               Connected OBD-II Active
             </span>
-          </div>
+          </div> */}
 
           <div className="vehicle-info-strip">
             <div>

@@ -4,7 +4,7 @@ export const protect =(req,res,next)=>{
 
 //Check whether token is provided
 if (!header||!header.startsWith("Bearer")){
-    return res.status(400).json({
+    return res.status(401).json({
         message:"Not authorized,no token provided",
     });
 }

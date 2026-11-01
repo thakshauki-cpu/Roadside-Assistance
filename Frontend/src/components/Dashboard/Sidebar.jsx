@@ -26,7 +26,7 @@ const menuItems = [
     path: "/find-mechanic",
   },
   {
-  label: "My Requests",
+  label: "Get help",
   icon: Clock,
   path: "/get-help/location",
 },

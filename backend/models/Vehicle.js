@@ -21,13 +21,11 @@ const vehicleSchema=new mongoose.Schema(
 
         model: {
       type: String,
-      required: true,
+      
       trim: true,
     },
      registrationNumber: {
       type: String,
-  
-      unique: true,
       uppercase: true,
       trim: true,
     },
