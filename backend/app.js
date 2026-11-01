@@ -1,6 +1,8 @@
 import express from "express";
 import cors from "cors";
 import authRoutes from "./routes/authRoutes.js";
+import serviceRequestRoutes from "./routes/serviceRequestRoutes.js";
+
 
 const app = express();
 
@@ -16,5 +18,8 @@ app.get("/",(req,res)=>{
 
 //Auth routes
 app.use("/api/auth",authRoutes);
+
+//request auth
+app.use("/api/service-requests", serviceRequestRoutes);
 
 export default app;
