@@ -1,4 +1,4 @@
-import { Routes, Route } from "react-router-dom";
+import { Navigate, Routes, Route } from "react-router-dom";
 import ProtectedRoute from "./components/DashboardProtected";
 
 import HomePage from "./components/pages/HomePage";
@@ -19,7 +19,15 @@ import Summary from "./components/pages/getHelp/Summary";
 
 
 import MechanicRegisterPage from "./components/pages/Mechanic/MechanicRegisterPage";
+import MechanicDashboard from "./components/pages/Mechanic/MechanicDashboard";
 
+
+import AdminProtectedRoute from "./components/Admin/AdminProtectedRoute";
+import AdminLogin from "./components/pages/Admin/AdminLogin";
+import AdminDashboard from "./components/pages/Admin/AdminDashboard";
+import AdminCustomers from "./components/pages/Admin/AdminCustomers";
+import AdminReviews from "./components/pages/Admin/AdminReviews";
+import AdminMechanics from "./components/pages/Admin/AdminMechanics";
 
 function App() {
   return(
@@ -29,21 +37,21 @@ function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage/>}/>
-        <Route
-  path="/mechanic-register"
-  element={<MechanicRegisterPage />}
-/>
+        <Route  path="/mechanic-register" element={<MechanicRegisterPage />} />
+ 
+  
 
 
 
-        <Route
-  path="/dashboard"
-  element={
-    <ProtectedRoute>
-      <CustomerDashboard />
-    </ProtectedRoute>
-  }
-/>
+
+        <Route path="/dashboard"    element={ <ProtectedRoute> <CustomerDashboard />  </ProtectedRoute>  }/>
+          
+       
+           
+             
+          
+        
+        
 <Route
   path="/find-mechanic"
   element={
@@ -95,7 +103,7 @@ function App() {
   }
 />
 
-{/* Step 5: Tracking (Mechanic is on the way) */}
+{/*  Tracking (Mechanic is on the way) */}
 <Route
   path="/get-help/tracking"
   element={
@@ -105,7 +113,7 @@ function App() {
   }
 />
 
-{/* Step 6: Summary (Service completed, payment and rating) */}
+{/* Summary (Service completed, payment and rating) */}
 <Route
   path="/get-help/summary"
   element={
@@ -117,16 +125,24 @@ function App() {
 
 
 
+{/* Mechanic Dashboard */}
+<Route path="/mechanic/dashboard" element={<MechanicDashboard />}/>
 
 
 
 
 
+{/* Admin Routes */}
+<Route path="/admin" element={<Navigate to="/admin/login" />} />
+<Route path="/admin/login" element={<AdminLogin />} />
+
+<Route path="/admin/dashboard" element={<AdminProtectedRoute><AdminDashboard /></AdminProtectedRoute>} />
+<Route path="/admin/customers" element={<AdminProtectedRoute><AdminCustomers /></AdminProtectedRoute>} />
+<Route path="/admin/reviews" element={<AdminProtectedRoute><AdminReviews /></AdminProtectedRoute>} />
+<Route path="/admin/mechanics" element={<AdminProtectedRoute><AdminMechanics /></AdminProtectedRoute>} />
 
 
-
-
-      </Routes>
+</Routes>
    
     
     </>

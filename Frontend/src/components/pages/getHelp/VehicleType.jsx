@@ -213,7 +213,7 @@ const handleContinue = () => {
                   />
                 </div>
 
-                <div className="quick-select">
+                {/* <div className="quick-select">
                   <History size={18} />
                   <div>
                     <small>Quick select from profile</small>
@@ -222,7 +222,7 @@ const handleContinue = () => {
                   <button type="button" className="applied-button" onClick={handleQuickSelect}>
                     {applied ? "Applied ✓" : "Apply"}
                   </button>
-                </div>
+                </div> */}
 
                 <label className="gh-label" htmlFor="model">
                   Vehicle Model &amp; Color <small>(Optional)</small>
@@ -239,7 +239,7 @@ const handleContinue = () => {
               </div>
 
               {/* Right: rescue profile of the selected vehicle */}
-              <div className="dispatch-matrix">
+              {/* <div className="dispatch-matrix">
                 <div className="dispatch-matrix-top">
                   <span>RESCUE UNIT DISPATCH MATRIX</span>
                   <span className="auto-badge">Auto-assigned</span>
@@ -273,12 +273,12 @@ const handleContinue = () => {
                   </span>
                   <strong>{selectedVehicle.response}</strong>
                 </div>
-              </div>
+              </div> */}
             </div>
           </section>
 
           {/* Info banner */}
-          <section className="standards-banner">
+          {/* <section className="standards-banner">
             <span className="standards-icon">
               <Wrench size={18} />
             </span>
@@ -290,7 +290,7 @@ const handleContinue = () => {
                 the right vehicle category prevents towing mismatch delays.
               </p>
             </div>
-          </section>
+          </section> */}
 
           {/* Bottom bar */}
           <div className="gh-bottom-bar">

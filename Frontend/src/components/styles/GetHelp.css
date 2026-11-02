@@ -1044,6 +1044,7 @@ vechile type card */
   align-items: center;
   gap: 10px;
   font-size: 20px;
+  color: #172238;
 }
 
 .found-banner-text p {
@@ -1119,6 +1120,8 @@ vechile type card */
 .mechanic-top h2 {
   margin-bottom: 6px;
   font-size: 24px;
+  color: #000;
+  
 }
 
 .verified-badge {

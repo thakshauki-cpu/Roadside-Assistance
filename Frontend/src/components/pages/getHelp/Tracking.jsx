@@ -45,7 +45,7 @@ const mechanicFiles = import.meta.glob("../../../assets/mechanic-siva.{png,jpg,j
 const mapImage = Object.values(mapFiles)[0];
 const mechanicImage = Object.values(mechanicFiles)[0];
 
-// ----- Simulation settings (change these to make the demo faster or slower) -----
+// ----- Simulation settings (tracking)(change these to make the demo faster or slower) -----
 const TOTAL_MINUTES = 10; // starting ETA shown to the customer
 const TOTAL_KM = 1.8; // starting distance
 const SECONDS_PER_MINUTE = 2; // 1 "minute" on screen passes in 2 real seconds

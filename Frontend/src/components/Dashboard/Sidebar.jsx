@@ -36,11 +36,11 @@ const menuItems = [
     path: "/notifications",
     
   },
-  {
-    label: "Profile",
-    icon: UserRound,
-    path: "/profile",
-  },
+  // {
+  //   label: "Profile",
+  //   icon: UserRound,
+  //   path: "/profile",
+  // },
   // {
   //   label: "Settings",
   //   icon: Settings,

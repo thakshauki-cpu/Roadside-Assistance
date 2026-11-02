@@ -151,7 +151,7 @@ function MechanicFound() {
                 </div>
 
                 {/* Dispatched unit */}
-                <div className="unit-box">
+                {/* <div className="unit-box">
                   <span className="vehicle-option-icon">
                     <Truck size={20} />
                   </span>
@@ -160,7 +160,7 @@ function MechanicFound() {
                     <strong>{mechanic.unit}</strong>
                   </div>
                   <span className="unit-plate">{mechanic.plate}</span>
-                </div>
+                </div> */}
 
                 <h4 className="specialty-title">MECHANIC SPECIALTIES &amp; EQUIPMENT</h4>
                 <div className="specialty-grid">
@@ -186,7 +186,7 @@ function MechanicFound() {
               </section>
 
               {/* Route card (placeholder map) */}
-              <section className="gethelp-card">
+              {/* <section className="gethelp-card">
                 <div className="route-heading">
                   <h3>
                     <Navigation size={15} /> Proximity &amp; Approach Route
@@ -200,7 +200,7 @@ function MechanicFound() {
                     <strong>2.1 km (8 - 10 min away)</strong>
                   </div>
                 </div>
-              </section>
+              </section> */}
             </div>
 
             {/* ===== Right column: quotation ===== */}
@@ -247,13 +247,13 @@ function MechanicFound() {
                   </div>
                 </div>
 
-                <div className="guarantee-note">
+                {/* <div className="guarantee-note">
                   <CircleCheck size={16} />
                   <p>
                     <strong>RoadMate Fixed-Price Guarantee:</strong> The mechanic cannot alter this
                     quotation on site without your explicit verbal and in-app consent.
                   </p>
-                </div>
+                </div> */}
 
                 <p className="settlement-title">Accepted Settlement Upon Work Completion:</p>
                 <div className="settlement-chips">
@@ -274,7 +274,7 @@ function MechanicFound() {
                 </p>
               </section>
 
-              <section className="gethelp-card review-quote">
+              {/* <section className="gethelp-card review-quote">
                 <span className="vehicle-option-icon">
                   <MessageSquareQuote size={20} />
                 </span>
@@ -283,7 +283,7 @@ function MechanicFound() {
                   <br />
                   S. Mahendran • Nissan Sunny Tyre Replacement (3 days ago)
                 </p>
-              </section>
+              </section> */}
             </div>
           </div>
 

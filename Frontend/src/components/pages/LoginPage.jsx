@@ -57,8 +57,12 @@ const handleLogin = async (event) => {
     localStorage.setItem("token", data.token);
     localStorage.setItem("user", JSON.stringify(data.user));
 
-    // Mechanic dashboard is not built yet, so both go to /dashboard for now
-    navigate("/dashboard");
+   // Redirect the user according to their role.
+if (data.user.role === "mechanic") {
+  navigate("/mechanic/dashboard");
+} else if (data.user.role === "customer") {
+  navigate("/dashboard");
+}
   } catch (err) {
     // err.message is the message sent by the backend
     setError(err.message);
