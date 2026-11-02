@@ -5,6 +5,9 @@ import {
   adminLogin,
   getAdminMe,
   getAdminDashboard,
+   getAdminMechanics,
+  approveMechanic,
+  rejectMechanic,
 } from "../controller/adminController.js";
 
 import {
@@ -24,5 +27,12 @@ router.get("/me", getAdminMe);
 
 // Admin Dashboard
 router.get("/dashboard", getAdminDashboard);
+
+// Mechanic verification
+router.get("/mechanics", getAdminMechanics);
+
+router.patch("/mechanics/:id/approve", approveMechanic);
+
+router.patch("/mechanics/:id/reject", rejectMechanic);
 
 export default router;

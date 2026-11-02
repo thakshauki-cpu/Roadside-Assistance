@@ -1,11 +1,12 @@
 import { Navigate } from "react-router-dom";
 
-// Only lets the admin see the page if they logged in
 function AdminProtectedRoute({ children }) {
-  const loggedIn = localStorage.getItem("adminLoggedIn");
+  const token =
+    localStorage.getItem("adminToken") ||
+    sessionStorage.getItem("adminToken");
 
-  if (loggedIn !== "true") {
-    return <Navigate to="/admin/login" />;
+  if (!token) {
+    return <Navigate to="/admin/login" replace />;
   }
 
   return children;

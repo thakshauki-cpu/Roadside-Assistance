@@ -201,3 +201,121 @@ export const getAdminDashboard = async (req, res) => {
     });
   }
 };
+
+
+
+
+// Get mechanic verification applications
+export const getAdminMechanics = async (req, res) => {
+  try {
+    const { status = "pending" } = req.query;
+
+    let query = {};
+
+    if (status === "pending") {
+      query = {
+        isVerified: { $ne: true },
+        $or: [
+          { verificationStatus: "pending" },
+          { verificationStatus: { $exists: false } },
+        ],
+      };
+    } else if (status === "approved") {
+      query = {
+        $or: [
+          { verificationStatus: "approved" },
+          { isVerified: true },
+        ],
+      };
+    } else if (status === "rejected") {
+      query = { verificationStatus: "rejected" };
+    }
+
+    const mechanics = await MechanicProfile.find(query)
+      .populate("user", "fullName email mobile")
+      .sort({ createdAt: -1 });
+
+    return res.status(200).json({
+      success: true,
+      count: mechanics.length,
+      mechanics,
+    });
+  } catch (error) {
+    console.error("Admin get mechanics error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch mechanic applications",
+    });
+  }
+};
+
+
+// Approve mechanic
+export const approveMechanic = async (req, res) => {
+  try {
+    const mechanic = await MechanicProfile.findByIdAndUpdate(
+      req.params.id,
+      {
+        isVerified: true,
+        verificationStatus: "approved",
+      },
+      { new: true, runValidators: true }
+    ).populate("user", "fullName email mobile");
+
+    if (!mechanic) {
+      return res.status(404).json({
+        success: false,
+        message: "Mechanic not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Mechanic approved successfully",
+      mechanic,
+    });
+  } catch (error) {
+    console.error("Approve mechanic error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to approve mechanic",
+    });
+  }
+};
+
+
+// Reject mechanic
+export const rejectMechanic = async (req, res) => {
+  try {
+    const mechanic = await MechanicProfile.findByIdAndUpdate(
+      req.params.id,
+      {
+        isVerified: false,
+        verificationStatus: "rejected",
+      },
+      { new: true, runValidators: true }
+    ).populate("user", "fullName email mobile");
+
+    if (!mechanic) {
+      return res.status(404).json({
+        success: false,
+        message: "Mechanic not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Mechanic rejected successfully",
+      mechanic,
+    });
+  } catch (error) {
+    console.error("Reject mechanic error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to reject mechanic",
+    });
+  }
+};

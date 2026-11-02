@@ -62,6 +62,11 @@ const mechanicProfileSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    verificationStatus: {
+      type: String,
+      enum: ["pending", "approved", "rejected"],
+      default: "pending",
+    },
   },
   { timestamps: true }
 );
