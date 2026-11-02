@@ -26,31 +26,26 @@ function AdminMechanics() {
   };
 
   const tabList = [
-    { key: "All", label: "All", count: 68 },
-    { key: "Approved", label: "Approved", count: 62 },
-    { key: "Blocked", label: "Blocked", count: 6 },
+    { key: "All", label: "All", count: 6 },
+    { key: "Approved", label: "Approved", count: 4 },
+    { key: "Blocked", label: "Blocked", count: 0},
   ];
 
   return (
     <AdminLayout activeItem="Mechanics">
-      <p className="adm-breadcrumb">
-        Portal &gt; Admin Console &gt; <b>Mechanics</b>
-      </p>
+      
 
       <div className="adm-title-row">
         <div>
           <h1 className="adm-title">
-            Mechanics <span className="adm-chip">EP NETWORK DIRECTORY</span>{" "}
-            <span className="adm-chip grey">68 Registered</span>
+            Mechanics 
           </h1>
           <p className="adm-subtitle">
             Manage, monitor, and regulate verified roadside technicians and garage partners across Batticaloa &amp;
             Eastern Province corridors.
           </p>
         </div>
-        <button type="button" className="adm-btn" onClick={() => alert("Register Garage form will be built later.")}>
-          <Plus size={16} /> Register Garage
-        </button>
+        
       </div>
 
       {/* Stat cards */}
@@ -60,7 +55,7 @@ function AdminMechanics() {
             <span>TOTAL MECHANICS</span>
             <span className="adm-stat-icon"><Users size={17} /></span>
           </div>
-          <div className="adm-stat-value"><strong>68</strong><small>Eastern Province</small></div>
+          <div className="adm-stat-value"><strong>15</strong><small>Eastern Province</small></div>
           <small className="adm-stat-foot">All background checked &amp; geo-tagged</small>
         </div>
 
@@ -69,7 +64,7 @@ function AdminMechanics() {
             <span>ONLINE NOW</span>
             <span className="adm-stat-icon"><Radio size={17} /></span>
           </div>
-          <div className="adm-stat-value"><strong>18</strong><span className="adm-badge blue">● Ready for Dispatch</span></div>
+          <div className="adm-stat-value"><strong>4</strong><span className="adm-badge blue">● Ready for Dispatch</span></div>
           <small className="adm-stat-foot">Average Batticaloa ETA: 14 mins</small>
         </div>
 
@@ -78,8 +73,8 @@ function AdminMechanics() {
             <span>APPROVED GARAGES</span>
             <span className="adm-stat-icon"><Store size={17} /></span>
           </div>
-          <div className="adm-stat-value"><strong>62</strong><small>91.1% Compliance</small></div>
-          <div className="adm-progress"><span style={{ width: "91%" }} /></div>
+          <div className="adm-stat-value"><strong>8</strong><small>85%Compliance</small></div>
+          <div className="adm-progress"><span style={{ width: "85%" }} /></div>
         </div>
 
         <div className="adm-card adm-stat">
@@ -205,7 +200,7 @@ function AdminMechanics() {
           {visibleMechanics.length === 0 && <p className="adm-empty">No mechanics match your search.</p>}
         </div>
 
-        <div className="adm-pagination">
+        {/* <div className="adm-pagination">
           <span>
             Showing <b>1</b> to <b>{visibleMechanics.length}</b> of <b>68</b> mechanics
           </span>
@@ -217,7 +212,7 @@ function AdminMechanics() {
             <button type="button">7</button>
             <button type="button">Next</button>
           </div>
-        </div>
+        </div> */}
       </section>
     </AdminLayout>
   );

@@ -36,16 +36,16 @@ function AdminCustomers() {
       <div className="adm-title-row">
         <div>
           <h1 className="adm-title">
-            Customers <span className="adm-chip">EP REGISTRY</span>
+            Customers 
           </h1>
           <p className="adm-subtitle">
             Manage and monitor registered drivers and roadside assistance customers across Batticaloa &amp; Eastern
             Province corridors.
           </p>
         </div>
-        <button type="button" className="adm-btn" onClick={() => alert("Add Customer form will be built later.")}>
+        {/* <button type="button" className="adm-btn" onClick={() => alert("Add Customer form will be built later.")}>
           <UserPlus size={16} /> Add Customer
-        </button>
+        </button> */}
       </div>
 
       <div className="adm-stats">

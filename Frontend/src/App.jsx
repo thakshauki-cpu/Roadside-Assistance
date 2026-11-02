@@ -28,6 +28,7 @@ import AdminDashboard from "./components/pages/Admin/AdminDashboard";
 import AdminCustomers from "./components/pages/Admin/AdminCustomers";
 import AdminReviews from "./components/pages/Admin/AdminReviews";
 import AdminMechanics from "./components/pages/Admin/AdminMechanics";
+import AdminVerification from "./components/pages/Admin/AdminVerification";
 
 function App() {
   return(
@@ -140,7 +141,7 @@ function App() {
 <Route path="/admin/customers" element={<AdminProtectedRoute><AdminCustomers /></AdminProtectedRoute>} />
 <Route path="/admin/reviews" element={<AdminProtectedRoute><AdminReviews /></AdminProtectedRoute>} />
 <Route path="/admin/mechanics" element={<AdminProtectedRoute><AdminMechanics /></AdminProtectedRoute>} />
-
+<Route path="/admin/verification" element={<AdminProtectedRoute><AdminVerification /></AdminProtectedRoute>} />
 
 </Routes>
    

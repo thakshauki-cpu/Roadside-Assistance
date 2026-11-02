@@ -6,8 +6,8 @@ import logo from "../../assets/logo.png";
 const menuItems = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/admin/dashboard" },
   { label: "Customers", icon: Users, path: "/admin/customers" },
-//   { label: "Mechanics", icon: Store, path: "/admin/mechanics" },
-  { label: "Verification Requests", icon: ShieldCheck, path: "/admin/verification", badge: 5 },
+  { label: "Mechanics", icon: Store, path: "/admin/mechanics" },
+//   { label: "Verification Requests", icon: ShieldCheck, path: "/admin/verification", badge: 5 },
 //   { label: "Payment Details", icon: Banknote, path: "/admin/payments" },
   { label: "Reviews", icon: Star, path: "/admin/reviews" },
 //   { label: "Settings", icon: Settings, path: "/admin/settings" },
@@ -29,7 +29,7 @@ function AdminSidebar({ activeItem }) {
         <span className="adm-admin-tag">ADMIN</span>
       </div>
 
-      <p className="adm-menu-title">OPERATIONS CONSOLE</p>
+      {/* <p className="adm-menu-title">OPERATIONS CONSOLE</p> */}
 
       <nav className="adm-menu">
         {menuItems.map((item) => {

@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ListChecks, Search, Building2, MapPin, Phone, Clock, Eye, ShieldCheck, CreditCard } from "lucide-react";
-import AdminLayout from "../components/Admin/AdminLayout";
-import { pendingApplications, getInitials } from "../adminSampleData/adminSampleData";
+import AdminLayout from "../../Admin/AdminLayout";
+import { pendingApplications, getInitials } from "../../Admin/adminSampleData";
 
 function AdminVerification() {
   const navigate = useNavigate();

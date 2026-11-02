@@ -4,6 +4,8 @@ import authRoutes from "./routes/authRoutes.js";
 import serviceRequestRoutes from "./routes/serviceRequestRoutes.js";
 import dashboardRoutes from "./routes/dashboardRoutes.js";
 import mechanicRoutes from "./routes/mechanicRoutes.js";
+import adminRoutes from "./routes/adminRoutes.js";
+
 const app = express();
 
 //Middlewaree
@@ -25,5 +27,9 @@ app.use("/api/mechanics", mechanicRoutes);
 
 //request auth
 app.use("/api/service-requests", serviceRequestRoutes);
+
+// Admin Routes
+app.use("/api/admin", adminRoutes);
+
 
 export default app;

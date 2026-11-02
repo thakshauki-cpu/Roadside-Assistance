@@ -51,12 +51,7 @@ function AdminDashboard() {
 
   return (
     <AdminLayout activeItem="Dashboard">
-      <span className="adm-chip">LIVE OPERATIONAL CONSOLE</span>
-      <h1 className="adm-title">Admin Overview &amp; Dispatch</h1>
-      <p className="adm-subtitle">
-        Welcome back, System Admin. System operating nominally with <b className="adm-blue-text">18 Mechanics Active</b>{" "}
-        across Batticaloa &amp; Coastal Highway Corridors • 99.8% Uptime.
-      </p>
+  
 
       {/* Stat cards */}
       <div className="adm-stats">
