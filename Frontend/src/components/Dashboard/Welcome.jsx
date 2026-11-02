@@ -183,9 +183,9 @@ function WelcomeSection() {
           </div>
         </section>
 
+       
         {/* Vehicle card */}
         <section className="vehicle-card">
-
           <div className="vehicle-card-heading">
             <div className="vehicle-title">
               <h3>Your Vehicle</h3>
@@ -196,21 +196,13 @@ function WelcomeSection() {
                 </span>
               )}
             </div>
-
-            <button
-              type="button"
-              className="switch-vehicle-button"
-              onClick={() => navigate("/get-help/vehicle")}
-            >
-              ↔ Switch
-            </button>
           </div>
 
           {primaryVehicle ? (
             <>
               <div className="vehicle-details">
-                <div>
-                  <h4>{primaryVehicle.model}</h4>
+                <div className="vehicle-name">
+                  <h4>{primaryVehicle.model || "Vehicle"}</h4>
                   <p>{primaryVehicle.vehicleType}</p>
                 </div>
 
@@ -225,7 +217,7 @@ function WelcomeSection() {
               <div className="vehicle-image">
                 <img
                   src="/src/assets/Car.PNG"
-                  alt="Customer vehicle"
+                  alt={primaryVehicle.vehicleType || "Customer vehicle"}
                 />
               </div>
 
@@ -233,7 +225,7 @@ function WelcomeSection() {
                 <div>
                   <span>Vehicle Type</span>
                   <strong>
-                    <CarFront size={12} />
+                    <CarFront size={14} />
                     {primaryVehicle.vehicleType}
                   </strong>
                 </div>
@@ -247,21 +239,31 @@ function WelcomeSection() {
               </div>
             </>
           ) : (
-            <div className="vehicle-details">
-              <div>
+            <>
+              <div className="vehicle-empty-state">
+                <CarFront size={48} />
                 <h4>No Vehicle Added</h4>
-                <p>Add your vehicle details to get started.</p>
-                <button
-                  type="button"
-                  onClick={() => navigate("/get-help/vehicle")}
-                >
-                  Add Vehicle
-                </button>
+                <p>
+                  Your registered vehicle details will appear here.
+                </p>
               </div>
-            </div>
+
+              <div className="vehicle-info-strip vehicle-info-empty">
+                <div>
+                  <span>Vehicle Type</span>
+                  <strong>Not added</strong>
+                </div>
+
+                <div>
+                  <span>Registration</span>
+                  <strong>Not added</strong>
+                </div>
+              </div>
+            </>
           )}
         </section>
-      </div>
+        </div>
+
 
       {/* Bottom cards */}
       <div className="welcome-bottom-grid">
