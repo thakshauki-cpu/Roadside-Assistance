@@ -159,3 +159,114 @@ export const rejectAdminMechanic = async (mechanicId) => {
 
   return data;
 };
+
+
+
+ // CUSTOMER MANAGEMENT API
+ 
+
+// Get Admin Customers
+export const getAdminCustomers = async ({
+  search = "",
+  status = "All",
+  page = 1,
+  limit = 10,
+} = {}) => {
+  const token =
+    localStorage.getItem("adminToken") ||
+    sessionStorage.getItem("adminToken");
+
+  if (!token) {
+    throw new Error("Admin token not found. Please login again.");
+  }
+
+  const params = new URLSearchParams({
+    search,
+    status,
+    page: String(page),
+    limit: String(limit),
+  });
+
+  const response = await fetch(
+    `${API_URL}/api/admin/customers?${params.toString()}`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Unable to load customers.");
+  }
+
+  return data;
+};
+
+
+// Get Single Customer Details
+export const getAdminCustomerById = async (customerId) => {
+  const token =
+    localStorage.getItem("adminToken") ||
+    sessionStorage.getItem("adminToken");
+
+  if (!token) {
+    throw new Error("Admin token not found. Please login again.");
+  }
+
+  const response = await fetch(
+    `${API_URL}/api/admin/customers/${customerId}`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Unable to load customer details.");
+  }
+
+  return data;
+};
+
+
+// Block / Unblock Customer
+export const updateAdminCustomerStatus = async (
+  customerId,
+  isActive
+) => {
+  const token =
+    localStorage.getItem("adminToken") ||
+    sessionStorage.getItem("adminToken");
+
+  if (!token) {
+    throw new Error("Admin token not found. Please login again.");
+  }
+
+  const response = await fetch(
+    `${API_URL}/api/admin/customers/${customerId}/status`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ isActive }),
+    }
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Unable to update customer status.");
+  }
+
+  return data;
+};

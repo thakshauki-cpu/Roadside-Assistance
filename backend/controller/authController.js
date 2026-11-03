@@ -220,13 +220,14 @@ export const login = async (req, res) => {
       });
     }
 
-    if (user.role !== role) {
-      return res.status(403).json({
-        message: "This account does not belong to the selected role.",
-      });
-    }
+   // Check whether the customer account is blocked
+if (user.role === "customer" && user.isActive === false) {
+  return res.status(403).json({
+    message: "Your account has been blocked by the administrator. Please contact support.",
+  });
+}
 
-    // No Admin approval check at this stage
+    //  Admin approval check at this stage
     const token = generateToken(user._id.toString());
 
     return res.status(200).json({

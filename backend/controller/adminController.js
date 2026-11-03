@@ -319,3 +319,191 @@ export const rejectMechanic = async (req, res) => {
     });
   }
 };
+
+// CUSTOMER MANAGEMENT
+// GET ALL CUSTOMERS + SEARCH
+// GET /api/admin/customers
+
+
+export const getAdminCustomers = async (req, res) => {
+  try {
+    const {
+      search = "",
+      status = "All",
+      page = 1,
+      limit = 10,
+    } = req.query;
+
+    const currentPage = Math.max(Number(page) || 1, 1);
+    const perPage = Math.min(Math.max(Number(limit) || 10, 1), 100);
+
+    const query = {
+      role: "customer",
+    };
+
+    // Search by name, email or mobile
+    if (search.trim()) {
+      const safeSearch = search.trim().replace(
+        /[.*+?^${}()|[\]\\]/g,
+        "\\$&"
+      );
+
+      query.$or = [
+        { fullName: { $regex: safeSearch, $options: "i" } },
+        { email: { $regex: safeSearch, $options: "i" } },
+        { mobile: { $regex: safeSearch, $options: "i" } },
+      ];
+    }
+
+    // Filter by account status
+    if (status === "Active") {
+      query.isActive = { $ne: false };
+    } else if (status === "Blocked") {
+      query.isActive = false;
+    }
+
+    const [
+      customers,
+      totalCustomers,
+      totalActive,
+      totalBlocked,
+    ] = await Promise.all([
+      User.find(query)
+        .select("-password")
+        .sort({ createdAt: -1 })
+        .skip((currentPage - 1) * perPage)
+        .limit(perPage),
+
+      User.countDocuments(query),
+
+      User.countDocuments({
+        role: "customer",
+        isActive: { $ne: false },
+      }),
+
+      User.countDocuments({
+        role: "customer",
+        isActive: false,
+      }),
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      totalCustomers,
+      totalActive,
+      totalBlocked,
+      currentPage,
+      totalPages: Math.ceil(totalCustomers / perPage),
+      customers,
+    });
+  } catch (error) {
+    console.error("Admin get customers error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch customers.",
+    });
+  }
+};
+
+
+
+// GET SINGLE CUSTOMER DETAILS
+// GET /api/admin/customers/:id
+
+export const getAdminCustomerById = async (req, res) => {
+  try {
+    const customer = await User.findOne({
+      _id: req.params.id,
+      role: "customer",
+    }).select("-password");
+
+    if (!customer) {
+      return res.status(404).json({
+        success: false,
+        message: "Customer not found.",
+      });
+    }
+
+    const [totalRequests, recentRequests] = await Promise.all([
+      ServiceRequest.countDocuments({
+        customer: customer._id,
+      }),
+
+      ServiceRequest.find({
+        customer: customer._id,
+      })
+        .populate("vehicle", "vehicleType model registrationNumber")
+        .populate("mechanic", "fullName mobile")
+        .sort({ createdAt: -1 })
+        .limit(5),
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      customer,
+      totalRequests,
+      recentRequests,
+    });
+  } catch (error) {
+    console.error("Admin customer details error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch customer details.",
+    });
+  }
+};
+
+
+// ACTIVATE / DEACTIVATE CUSTOMER
+// PATCH /api/admin/customers/:id/status
+
+export const updateCustomerStatus = async (req, res) => {
+  try {
+    const { isActive } = req.body;
+
+    if (typeof isActive !== "boolean") {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide a valid isActive value.",
+      });
+    }
+
+    const customer = await User.findOneAndUpdate(
+      {
+        _id: req.params.id,
+        role: "customer",
+      },
+      {
+        isActive,
+      },
+      {
+        new: true,
+        runValidators: true,
+      }
+    ).select("-password");
+
+    if (!customer) {
+      return res.status(404).json({
+        success: false,
+        message: "Customer not found.",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: isActive
+        ? "Customer activated successfully."
+        : "Customer deactivated successfully.",
+      customer,
+    });
+  } catch (error) {
+    console.error("Update customer status error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to update customer status.",
+    });
+  }
+};

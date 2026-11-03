@@ -8,6 +8,9 @@ import {
    getAdminMechanics,
   approveMechanic,
   rejectMechanic,
+  getAdminCustomers,
+getAdminCustomerById,
+updateCustomerStatus,
 } from "../controller/adminController.js";
 
 import {
@@ -34,5 +37,13 @@ router.get("/mechanics", getAdminMechanics);
 router.patch("/mechanics/:id/approve", approveMechanic);
 
 router.patch("/mechanics/:id/reject", rejectMechanic);
+
+// Customer Management
+router.get("/customers", getAdminCustomers);
+
+router.get("/customers/:id", getAdminCustomerById);
+
+router.patch("/customers/:id/status", updateCustomerStatus);
+
 
 export default router;

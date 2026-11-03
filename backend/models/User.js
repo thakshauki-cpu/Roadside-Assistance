@@ -32,6 +32,12 @@ const userSchema = new mongoose.Schema(
             default:"customer",
             required:true,
         },
+         // Customer account status (Admin Management)
+        isActive: {
+                type: Boolean,
+                default: true,
+           },
+
 
     },
     {

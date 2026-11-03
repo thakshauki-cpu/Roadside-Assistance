@@ -4,6 +4,7 @@ import {
   registerUser,
   login,
   getMe,
+  
 } from "../controller/authController.js";
 
 import { protect } from "../middleware/authMiddleware.js";
