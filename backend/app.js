@@ -7,6 +7,7 @@ import mechanicRoutes from "./routes/mechanicRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
 import getHelpRoutes from "./routes/getHelpRoutes.js";
+import customerRoutes from "./routes/customerRoutes.js";
 const app = express();
 
 //Middlewaree
@@ -21,6 +22,7 @@ app.get("/",(req,res)=>{
 
 //Auth routes
 app.use("/api/auth",authRoutes);
+app.use("/api", customerRoutes);
 //Dashboard routes
 app.use("/api/dashboard", dashboardRoutes);
 // Mechanic routes

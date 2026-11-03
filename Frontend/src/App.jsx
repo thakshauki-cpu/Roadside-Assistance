@@ -7,6 +7,9 @@ import RegisterPage from "./components/pages/RegisterPage";
 import CustomerDashboard from "./components/pages/DashboardPage";
 import FindMechanic from "./components/pages/FindMechanic";
 import Notifications from "./components/pages/Notifications";
+import ProfilePage from "./components/pages/ProfilePage";
+
+
 
 import Location from "./components/pages/getHelp/Location";
 import VehicleType from "./components/pages/getHelp/VehicleType";
@@ -21,6 +24,7 @@ import Summary from "./components/pages/getHelp/Summary";
 import MechanicRegisterPage from "./components/pages/Mechanic/MechanicRegisterPage";
 import MechanicDashboard from "./components/pages/Mechanic/MechanicDashboard";
 
+import MechanicProtectedRoute from "./components/Mechanic/MechanicProtectedRoute";
 
 import AdminProtectedRoute from "./components/Admin/AdminProtectedRoute";
 import AdminLogin from "./components/pages/Admin/AdminLogin";
@@ -48,7 +52,14 @@ function App() {
         <Route path="/dashboard"    element={ <ProtectedRoute> <CustomerDashboard />  </ProtectedRoute>  }/>
           
        
-           
+           <Route
+  path="/profile"
+  element={
+    <ProtectedRoute>
+      <ProfilePage />
+    </ProtectedRoute>
+  }
+/>
              
           
         
@@ -127,8 +138,7 @@ function App() {
 
 
 {/* Mechanic Dashboard */}
-<Route path="/mechanic/dashboard" element={<MechanicDashboard />}/>
-
+<Route path="/mechanic/dashboard" element={<MechanicProtectedRoute><MechanicDashboard /></MechanicProtectedRoute>} />
 
 
 

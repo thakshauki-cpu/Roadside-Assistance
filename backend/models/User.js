@@ -20,6 +20,17 @@ const userSchema = new mongoose.Schema(
             required:true,
             trim:true,
         },
+        location: {
+            type: String,
+            trim: true,
+            default: "",
+            maxlength: 200,
+        },
+        preferredLanguage: {
+            type: String,
+            enum: ["English", "Tamil", "Sinhala"],
+            default: "English",
+        },
         password:{
             type:String,
             required:true,

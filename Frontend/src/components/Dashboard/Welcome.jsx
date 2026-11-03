@@ -4,28 +4,46 @@ import { useEffect, useState } from "react";
 import {
   ArrowRight,
   BellRing,
-  CheckCircle,
-  Fuel,
   MapPin,
   Navigation,
-  PhoneCall,
-  Star,
   Wrench,
   History,
   Sparkles,
   CarFront,
   Clock,
-  ClipboardList,
 } from "lucide-react";
 
 import "./Welcome.css";
 import { useNavigate } from "react-router-dom";
+import { getCustomerVehicles } from "../../api/customer";
+import carImage from "../../assets/Car.PNG";
+import bikeImage from "../../assets/Bike.PNG";
+import vanImage from "../../assets/Van.Png";
+import truckImage from "../../assets/Truck.PNG";
+import threeWheelerImage from "../../assets/Threewheeler.PNG";
+
+const vehicleImages = {
+  car: carImage,
+  bike: bikeImage,
+  van: vanImage,
+  truck: truckImage,
+  threewheeler: threeWheelerImage,
+};
+
+const getVehicleImage = (vehicleType) => {
+  const normalizedType = vehicleType?.trim().toLowerCase().replace(/\s+/g, "");
+  return vehicleImages[normalizedType] || carImage;
+};
 
 function WelcomeSection() {
   const navigate = useNavigate();
 
   // Dashboard data states
   const [dashboardData, setDashboardData] = useState(null);
+  const [registeredVehicles, setRegisteredVehicles] = useState([]);
+  const [selectedVehicleId, setSelectedVehicleId] = useState(null);
+  const [vehicleLoading, setVehicleLoading] = useState(true);
+  const [vehicleError, setVehicleError] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -68,6 +86,28 @@ function WelcomeSection() {
     fetchDashboardData();
   }, []);
 
+  useEffect(() => {
+    let active = true;
+
+    getCustomerVehicles()
+      .then((data) => {
+        if (active) {
+          setRegisteredVehicles(data.vehicles);
+          setSelectedVehicleId(data.vehicles[0]?.id || null);
+        }
+      })
+      .catch((requestError) => {
+        if (active) setVehicleError(requestError.message);
+      })
+      .finally(() => {
+        if (active) setVehicleLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   // Loading state
   if (loading) {
     return (
@@ -94,13 +134,15 @@ function WelcomeSection() {
   // Backend data
   const {
     customer,
-    overview,
-    primaryVehicle,
     activeRequest,
     recentRequests,
     nearbyMechanics,
   } = dashboardData;
 
+  const primaryVehicle =
+    registeredVehicles.find((vehicle) => vehicle.id === selectedVehicleId) ||
+    registeredVehicles[0] ||
+    null;
   const firstName = customer?.fullName?.split(" ")[0] || "Customer";
 
   // Use active request first, otherwise latest history
@@ -190,34 +232,40 @@ function WelcomeSection() {
             <div className="vehicle-title">
               <h3>Your Vehicle</h3>
 
-              {primaryVehicle && (
+              {registeredVehicles.length > 0 && (
                 <span className="primary-badge">
-                  {primaryVehicle.isPrimary ? "Primary" : "Latest"}
+                  {registeredVehicles.length} Saved
                 </span>
               )}
             </div>
           </div>
 
-          {primaryVehicle ? (
+          {vehicleLoading ? (
+            <p className="vehicle-loading" role="status">Loading your saved vehicles...</p>
+          ) : vehicleError ? (
+            <p className="vehicle-loading" role="alert">{vehicleError}</p>
+          ) : primaryVehicle ? (
             <>
               <div className="vehicle-details">
                 <div className="vehicle-name">
-                  <h4>{primaryVehicle.model || "Vehicle"}</h4>
+                  <h4>{primaryVehicle.vehicleModel || "Vehicle"}</h4>
                   <p>{primaryVehicle.vehicleType}</p>
                 </div>
 
                 <div className="vehicle-plate">
                   <span className="plate-country">LK</span>
-                  <span>
-                    {primaryVehicle.registrationNumber || "Not added"}
-                  </span>
+                  <span>{primaryVehicle.vehicleNumber || "Not added"}</span>
                 </div>
               </div>
 
               <div className="vehicle-image">
                 <img
-                  src="/src/assets/Car.PNG"
+                  src={getVehicleImage(primaryVehicle.vehicleType)}
                   alt={primaryVehicle.vehicleType || "Customer vehicle"}
+                  onError={(event) => {
+                    event.currentTarget.onerror = null;
+                    event.currentTarget.src = carImage;
+                  }}
                 />
               </div>
 
@@ -231,10 +279,8 @@ function WelcomeSection() {
                 </div>
 
                 <div>
-                  <span>Added On</span>
-                  <strong>
-                    {formatDate(primaryVehicle.createdAt).split(",")[0]}
-                  </strong>
+                  <span>Vehicle Number</span>
+                  <strong>{primaryVehicle.vehicleNumber || "Not added"}</strong>
                 </div>
               </div>
             </>
@@ -260,6 +306,26 @@ function WelcomeSection() {
                 </div>
               </div>
             </>
+          )}
+
+          {registeredVehicles.length > 1 && (
+            <div className="dashboard-registered-vehicle-list">
+              {registeredVehicles.map((vehicle) => (
+                <button
+                  type="button"
+                  className={`dashboard-registered-vehicle ${
+                    vehicle.id === primaryVehicle?.id ? "selected" : ""
+                  }`}
+                  aria-pressed={vehicle.id === primaryVehicle?.id}
+                  onClick={() => setSelectedVehicleId(vehicle.id)}
+                  key={vehicle.id}
+                >
+                  <strong>{vehicle.vehicleModel}</strong>
+                  <span>{vehicle.vehicleType}</span>
+                  <span>{vehicle.vehicleNumber}</span>
+                </button>
+              ))}
+            </div>
           )}
         </section>
         </div>

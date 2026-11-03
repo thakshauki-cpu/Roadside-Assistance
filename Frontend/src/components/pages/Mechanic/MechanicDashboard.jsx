@@ -1,329 +1,332 @@
-
 import { useState } from "react";
+
 import {
-  CarFront,
-  LayoutDashboard,
-  ClipboardList,
-  Wallet,
-  UserRound,
-  Bell,
-  Settings,
-  LogOut,
-  Search,
-  MapPin,
-  Headset,
-  Star,
   CircleDollarSign,
   CheckCircle2,
   Clock3,
-  Phone,
-  Navigation,
   ShieldAlert,
-  Power,
+  UserRound,
+  MapPin,
+  Navigation,
+  Phone,
+  Flag,
 } from "lucide-react";
+
+import MechanicSidebar from "../../Mechanic/MechanicSidebar";
+import MechanicTopbar from "../../Mechanic/Topbar";
 
 import "../../styles/Mechanic/MechanicDashboard.css";
 
 function MechanicDashboard() {
-  // Store the mechanic's availability status locally for now.
-  const [isAvailable, setIsAvailable] = useState(true);
 
-  const mechanicName =
-    JSON.parse(localStorage.getItem("user") || "{}").fullName ||
-    "Mechanic";
+  const user = JSON.parse(
+    localStorage.getItem("user") || "{}"
+  );
 
-  const handleAvailability = () => {
-    // This changes the UI only. Backend integration will save this status later.
-    setIsAvailable((previousStatus) => !previousStatus);
-  };
+  const mechanicName = user.fullName || "Mechanic";
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    window.location.href = "/login";
-  };
+  const [arrived, setArrived] = useState(false);
 
   return (
     <div className="mechanic-dashboard">
-      {/* Sidebar */}
-      <aside className="mechanic-sidebar">
-        <div className="mechanic-brand">
-          <img
-          src="/src/assets/logo.png"
-          alt="Roadmate"
-          
-          />
-        </div>
 
-        <div className="mechanic-location">
-          <MapPin size={13} />
-          Batticaloa Sector
-        </div>
+      {/* Reusable Sidebar */}
+      <MechanicSidebar activeItem="Dashboard" />
 
-        <nav className="mechanic-nav">
-          <a href="/mechanic/dashboard" className="active">
-            <LayoutDashboard size={17} />
-            Dashboard
-          </a>
-
-          <a href="/mechanic/requests">
-            <ClipboardList size={17} />
-            Requests
-            <span className="nav-count">3</span>
-          </a>
-
-          <a href="/mechanic/earnings">
-            <Wallet size={17} />
-            Earnings
-          </a>
-
-          <a href="/mechanic/profile">
-            <UserRound size={17} />
-            Profile
-          </a>
-
-          <a href="/mechanic/notifications">
-            <Bell size={17} />
-            Notifications
-          </a>
-
-          <a href="/mechanic/settings">
-            <Settings size={17} />
-            Settings
-          </a>
-        </nav>
-
-        <div className="mechanic-sidebar-bottom">
-          <div className="sidebar-duty">
-            <span>Duty Status</span>
-            <strong className={isAvailable ? "online" : "offline"}>
-              <i />
-              {isAvailable ? "ONLINE" : "OFFLINE"}
-            </strong>
-            <small>
-              {isAvailable
-                ? "Available for emergency jobs"
-                : "Not accepting new jobs"}
-            </small>
-          </div>
-
-          <button
-            type="button"
-            className="mechanic-logout"
-            onClick={handleLogout}
-          >
-            <LogOut size={15} />
-            Log Out
-          </button>
-        </div>
-      </aside>
-
-      {/* Main content */}
+      {/* Main section */}
       <main className="mechanic-main">
-        {/* Topbar */}
-        <header className="mechanic-topbar">
-          <div className="mechanic-search">
-            <Search size={17} />
-            <input
-              type="search"
-              placeholder="Search jobs, ticket ID, or +94 phone..."
-            />
-          </div>
 
-          <div className="topbar-location">
-            <MapPin size={13} />
-            Kallady, Batticaloa
-          </div>
-
-          <div className="topbar-help">
-            <Headset size={14} />
-            Helpdesk: 065 222 4500
-          </div>
-
-          <button
-            type="button"
-            className="topbar-notification"
-            aria-label="Notifications"
-          >
-            <Bell size={19} />
-            <span>3</span>
-          </button>
-
-          <div className="topbar-profile">
-            <div>
-              <strong>{mechanicName}</strong>
-              <small><Star size={11} fill="currentColor" /> 4.9 (142 jobs)</small>
-            </div>
-            <div className="profile-avatar">
-              <UserRound size={20} />
-            </div>
-          </div>
-        </header>
+        {/* Reusable Topbar */}
+        <MechanicTopbar />
 
         {/* Welcome section */}
         <section className="mechanic-welcome">
+
           <h1>
             HELLO
             <br />
             {mechanicName}!
           </h1>
+
           <p>
             Ready for roadside assistance calls across Batticaloa.
-            High vehicle density detected along A4 Coastal Corridor & Gate Bazaar.
+            High vehicle density detected along A4
+            <br />
+            Coastal Corridor & Gate Bazaar.
           </p>
+
         </section>
 
-        {/* Dashboard summary cards */}
+        {/* Statistics cards */}
         <section className="mechanic-stat-grid">
+
+          {/* Earnings */}
           <div className="mechanic-stat-card">
+
             <div className="stat-heading">
               TODAY'S EARNINGS
+
               <span className="stat-icon green">
-                <CircleDollarSign size={20} />
+                <CircleDollarSign size={19} />
               </span>
             </div>
+
             <h2>Rs. 18,500</h2>
-            <p className="stat-positive">↗ +12% <span>vs yesterday</span></p>
+
+            <p className="stat-positive">
+              ↗ +12% <span>vs yesterday</span>
+            </p>
+
             <div className="stat-bottom">
               <span>Target: Rs. 24,000</span>
               <span>77% met</span>
             </div>
+
           </div>
 
+          {/* Jobs completed */}
           <div className="mechanic-stat-card">
+
             <div className="stat-heading">
               JOBS COMPLETED
+
               <span className="stat-icon blue">
-                <CheckCircle2 size={20} />
+                <CheckCircle2 size={19} />
               </span>
             </div>
-            <h2>4 <small>/ 6 Target</small></h2>
+
+            <h2>
+              4 <small>/ 6 Target</small>
+            </h2>
+
             <div className="target-progress">
               <span />
             </div>
-            <p className="stat-description">2 more to daily milestone bonus</p>
+
+            <p className="stat-description">
+              2 more to daily milestone bonus
+            </p>
+
           </div>
 
+          {/* Active dispatch */}
           <div className="mechanic-stat-card active-job-card">
+
             <div className="stat-heading">
               ACTIVE DISPATCH
               <span className="active-dot" />
             </div>
+
             <h2>1 Live Job</h2>
-            <p><Clock3 size={13} /> Awaiting Technician Arrival</p>
+
+            <p>
+              <Clock3 size={13} />
+              Awaiting Technician Arrival
+            </p>
+
             <div className="dispatch-bottom">
               <span>Ticket: #RM-8492</span>
               <span>ETA: 6 mins</span>
             </div>
+
           </div>
 
+          {/* Response time */}
           <div className="mechanic-stat-card">
+
             <div className="stat-heading">
               AVG RESPONSE TIME
+
               <span className="stat-icon blue">
-                <Clock3 size={20} />
+                <Clock3 size={19} />
               </span>
             </div>
+
             <h2>14 mins</h2>
-            <p className="stat-positive">♧ Top 5% <span>Eastern Province</span></p>
+
+            <p className="stat-positive">
+              ✧ Top 5% <span>Eastern Province</span>
+            </p>
+
             <div className="stat-bottom">
               <span>Zone Avg: 26 mins</span>
-              <span className="stat-positive">-12 mins faster</span>
+              <span className="stat-positive">
+                -12 mins faster
+              </span>
             </div>
+
           </div>
+
         </section>
 
-        {/* Main dashboard area */}
+        {/* Main work area */}
         <section className="mechanic-work-area">
+
+          {/* Urgent dispatch */}
           <div className="urgent-dispatch-card">
+
             <div className="urgent-heading">
+
               <div className="urgent-alert">
                 <ShieldAlert size={19} />
               </div>
 
-              <div>
+              <div className="urgent-title">
                 <h3>Urgent Live Dispatch</h3>
-                <p>Ticket #RM-8492 • Broadcasted 4 mins ago</p>
+
+                <p>
+                  Ticket #RM-8492 • Broadcasted 4 mins ago
+                </p>
               </div>
 
-              <span className="priority-label">● HIGH PRIORITY</span>
-              <strong className="dispatch-fee">Rs. 4,200 <small>est. fee</small></strong>
+              <span className="priority-label">
+                ● HIGH PRIORITY
+              </span>
+
+              <strong className="dispatch-fee">
+                Rs. 4,200
+                <small> est. fee</small>
+              </strong>
+
             </div>
 
+            {/* Motorist and failure details */}
             <div className="customer-details">
-              <div>
+
+              <div className="motorist-details">
+
                 <small>MOTORIST DETAILS</small>
-                <h4>Niroshan Perera</h4>
-                <strong>077 892 4110</strong>
-                <p>Vehicle: Honda Grace (Hybrid) · WP CAA 4821</p>
+
+                <div className="motorist-info">
+                  <span className="motorist-avatar">
+                    <UserRound size={20} />
+                  </span>
+
+                  <div>
+                    <h4>Niroshan Perera</h4>
+                    <strong>077 892 4110</strong>
+                  </div>
+                </div>
+
+                <p>
+                  Vehicle: Honda Grace (Hybrid)
+                  &nbsp; WP CAA 4821
+                </p>
+
               </div>
 
-              <div>
+              <div className="failure-details">
+
                 <small>FAILURE DIAGNOSTICS</small>
-                <h4 className="failure-text">Alternator Failure / Battery Dead</h4>
-                <p><MapPin size={13} /> Gate Bazaar Junction, Near Clock Tower</p>
-                <p>Distance: 1.8 km · Est. Travel Time: 6 mins</p>
+
+                <h4>
+                  <ShieldAlert size={13} />
+                  Alternator Failure / Battery Dead
+                </h4>
+
+                <p>
+                  <MapPin size={13} />
+                  Gate Bazaar Junction, Near Clock Tower
+                </p>
+
+                <p>
+                  Distance: 1.8 km
+                  &nbsp; · &nbsp;
+                  Est. Travel Time: <strong>6 mins</strong>
+                </p>
+
               </div>
+
             </div>
 
+            {/* Empty map area - intentionally left blank */}
             <div className="dispatch-map-placeholder">
-              <span>Map preview will appear here</span>
             </div>
 
+            {/* Action buttons */}
             <div className="dispatch-actions">
-              <button type="button" className="navigate-button">
+
+              <button
+                type="button"
+                className="navigate-button"
+                onClick={() =>
+                  window.open(
+                    "https://www.google.com/maps/search/?api=1&query=Gate+Bazaar+Batticaloa",
+                    "_blank"
+                  )
+                }
+              >
                 <Navigation size={14} />
                 Navigate with Maps (6m)
               </button>
 
-              <button type="button" className="call-button">
+              <a
+                href="tel:0778924110"
+                className="call-button"
+              >
                 <Phone size={14} />
                 Call Customer
+              </a>
+
+              <button
+                type="button"
+                className="arrived-button"
+                onClick={() => setArrived(true)}
+              >
+                <Flag size={13} />
+                {arrived ? "Arrived" : "Update to Arrived"}
               </button>
 
-              <button type="button" className="arrived-button">
-                Update to Arrived
-              </button>
             </div>
+
           </div>
 
-          {/* Availability card replaces Emergency Province Support */}
-          <aside className="mechanic-availability-card">
-            <div className="availability-card-heading">
-              <Power size={18} />
-              <span>MECHANIC DUTY STATUS</span>
+          {/* Priority support */}
+          <aside className="priority-support-card">
+
+            <div className="support-heading">
+              <span className="support-indicator" />
+              PRIORITY SUPPORT LINE
             </div>
 
-            <h2>
-              {isAvailable ? "You are Available" : "You are Unavailable"}
-            </h2>
+            <h3>Eastern Province Support</h3>
 
-            <p>
-              {isAvailable
-                ? "Customers can find your profile and send you service requests."
-                : "Customers will not see you as an available mechanic."}
+            <p className="support-description">
+              Emergency escalation for dangerous road
+              conditions, accident obstructions, or towing
+              escorts.
             </p>
 
-            <div className={`availability-status ${isAvailable ? "status-online" : "status-offline"}`}>
-              <span />
-              {isAvailable ? "AVAILABLE FOR JOBS" : "NOT AVAILABLE"}
+            <div className="support-contact">
+
+              <div>
+                <span>
+                  <ShieldAlert size={13} />
+                  Police Patrol / Emergency
+                </span>
+
+                <strong>119</strong>
+              </div>
+
+              <div>
+                <span>
+                  <Phone size={13} />
+                  Highway Assist
+                  <br />
+                  Batticaloa
+                </span>
+
+                <strong>065 222 2222</strong>
+              </div>
+
             </div>
 
-            <button
-              type="button"
-              className={`availability-toggle ${isAvailable ? "toggle-on" : "toggle-off"}`}
-              onClick={handleAvailability}
-            >
-              <span className="toggle-circle" />
-              {isAvailable ? "Go Unavailable" : "Go Available"}
-            </button>
-
-            <small className="availability-note">
-              You can change your duty status anytime.
-            </small>
           </aside>
+
         </section>
+
       </main>
+
     </div>
   );
 }
