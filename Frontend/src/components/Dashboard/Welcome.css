@@ -80,7 +80,7 @@
 
 .roadside-banner-content h2 {
   margin:26px 0 0;
-  font-size: 40px;
+  font-size: 30px;
   line-height: 1.16;
   font-weight: 750;
   letter-spacing: -0.5px;
@@ -174,7 +174,7 @@
 
 .vehicle-title h3 {
   margin: 0;
-  font-size: 40px;
+  font-size: 24px;
 }
 
 .primary-badge {
@@ -387,7 +387,7 @@
 
 .dashboard-card-heading h3 {
   margin: 0;
-  font-size: 25px;
+  font-size: 15px;
   line-height: 1.35;
 }
 
@@ -396,7 +396,7 @@
   border: none;
   background: transparent;
   color: #0645df;
-  font-size: 15px;
+  font-size: 10px;
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
@@ -419,7 +419,7 @@
 
 .request-title-row h4 {
   margin: 0;
-  font-size: 20px;
+  font-size: 15px;
   line-height: 1.45;
 }
 
@@ -437,14 +437,14 @@
 .request-date {
   margin: 5px 0 9px;
   color: #818ba0;
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .request-mechanic {
   display: flex;
   align-items: center;
   gap: 5px;
-  font-size: 15px;
+  font-size: 10px;
 }
 
 .request-mechanic svg {
@@ -463,7 +463,7 @@
 
 .request-rating > span {
   color: #67728a;
-  font-size: 15px;
+  font-size: 10px;
 }
 
 .request-rating > div {
@@ -495,7 +495,7 @@
 /* Nearby mechanics */
 .active-mechanics-count {
   color: #00875f;
-  font-size: 15px;
+  font-size: 10px;
   text-align: right;
 }
 
@@ -508,7 +508,7 @@
 
 .mechanic-name-row h4 {
   margin: 0;
-  font-size: 20px;
+  font-size: 15px;
   line-height: 1.4;
 }
 
@@ -528,7 +528,7 @@
   align-items: center;
   gap: 4px;
   margin-top: 8px;
-  font-size: 15px;
+  font-size: 10px;
 }
 
 .mechanic-rating svg {

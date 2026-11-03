@@ -11,6 +11,7 @@ import {
   getAdminCustomers,
 getAdminCustomerById,
 updateCustomerStatus,
+getAdminMechanicById,
 } from "../controller/adminController.js";
 
 import {
@@ -44,6 +45,8 @@ router.get("/customers", getAdminCustomers);
 router.get("/customers/:id", getAdminCustomerById);
 
 router.patch("/customers/:id/status", updateCustomerStatus);
+
+router.get("/mechanics/:id", getAdminMechanicById);
 
 
 export default router;

@@ -507,3 +507,34 @@ export const updateCustomerStatus = async (req, res) => {
     });
   }
 };
+
+
+// GET SINGLE MECHANIC DETAILS
+// GET /api/admin/mechanics/:id
+
+export const getAdminMechanicById = async (req, res) => {
+  try {
+    const mechanic = await MechanicProfile.findById(req.params.id)
+      .populate("user", "fullName email mobile createdAt");
+
+    if (!mechanic) {
+      return res.status(404).json({
+        success: false,
+        message: "Mechanic not found.",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      mechanic,
+    });
+
+  } catch (error) {
+    console.error("Admin mechanic details error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch mechanic details.",
+    });
+  }
+};

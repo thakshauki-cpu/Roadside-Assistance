@@ -100,6 +100,35 @@ export const getAdminMechanics = async (status = "pending") => {
   return data;
 };
 
+// Get a mechanic's full verification details
+export const getAdminMechanicById = async (mechanicId) => {
+  const token =
+    localStorage.getItem("adminToken") ||
+    sessionStorage.getItem("adminToken");
+
+  if (!token) {
+    throw new Error("Admin token not found. Please login again.");
+  }
+
+  const response = await fetch(
+    `${API_URL}/api/admin/mechanics/${mechanicId}`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Unable to load mechanic details.");
+  }
+
+  return data;
+};
+
 
 // Approve mechanic
 export const approveAdminMechanic = async (mechanicId) => {
