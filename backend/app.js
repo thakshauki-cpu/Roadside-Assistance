@@ -5,7 +5,7 @@ import serviceRequestRoutes from "./routes/serviceRequestRoutes.js";
 import dashboardRoutes from "./routes/dashboardRoutes.js";
 import mechanicRoutes from "./routes/mechanicRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
-
+import notificationRoutes from "./routes/notificationRoutes.js";
 const app = express();
 
 //Middlewaree
@@ -30,6 +30,9 @@ app.use("/api/service-requests", serviceRequestRoutes);
 
 // Admin Routes
 app.use("/api/admin", adminRoutes);
+
+// Notification routes
+app.use("/api/notifications", notificationRoutes);
 
 
 export default app;
