@@ -101,10 +101,17 @@ function Problem() {
 
     // Get JWT token
     const token = localStorage.getItem("token");
+    const apiUrl = import.meta.env.VITE_API_URL;
 
     if (!token) {
       setError("Please login again.");
       return;
+    }
+
+    if (!apiUrl) {
+      throw new Error(
+        "The backend URL is not configured. Set VITE_API_URL in Frontend/.env and restart Vite."
+      );
     }
 
     // Check previous step data
@@ -116,7 +123,7 @@ function Problem() {
     
     // Send data to Backend
     const response = await fetch(
-      `${import.meta.env.VITE_API_URL}/api/service-requests`,
+      `${apiUrl}/api/service-requests`,
       {
         method: "POST",
         headers: {
@@ -143,13 +150,21 @@ function Problem() {
       "createdServiceRequest",
       JSON.stringify(data.serviceRequest)
     );
+    localStorage.setItem(
+      "serviceRequest",
+      JSON.stringify({ ...saved, issue: selected, description })
+    );
 
     // Go to next page
     navigate("/get-help/mechanic-found");
 
   } catch (error) {
     console.error("Service Request Error:", error);
-    setError(error.message);
+    setError(
+      error instanceof TypeError
+        ? `Cannot connect to the backend at ${import.meta.env.VITE_API_URL || "the configured API URL"}. Start the backend server and confirm VITE_API_URL in Frontend/.env.`
+        : error.message
+    );
   } finally {
     setIsSubmitting(false);
   }

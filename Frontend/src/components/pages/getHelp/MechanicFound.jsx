@@ -12,71 +12,140 @@ import {
   Banknote,
   QrCode,
   CreditCard,
-  Navigation,
-  MessageSquareQuote,
   Phone,
   X,
   ArrowRight,
-  Truck,
   LockKeyhole,
 } from "lucide-react";
 
 import DashboardSidebar from "../../Dashboard/Sidebar";
 import DashboardTopbar from "../../Dashboard/Topbar";
 import RequestStepper from "../../getHelp/RequestStepper";
+import {
+  getAssignment,
+  getNearbyMechanics,
+  respondToQuotation,
+} from "../../../api/getHelp";
+import { getCreatedRequestId, readRequest } from "./requestSampleData";
 import "../../styles/GetHelp.css";
-
-// Sample data. Later this will come from the backend (API).
-const mechanic = {
-  name: "Siva Auto Care",
-  rating: 4.6,
-  reviews: 142,
-  address: "Kallady Beach Road, Batticaloa",
-  distance: "2.1 km away",
-  eta: "ETA ~10 mins",
-  unit: "Tata Ace Heavy Rescue Van",
-  plate: "EP DA 5521",
-  specialties: [
-    "Emergency Tyre & Brake Specialist",
-    "Mobile 150 PSI Air Compressor",
-    "3-Ton Rapid Hydraulic Jacks",
-    "12V/24V Heavy Duty Jump Starters",
-  ],
-  labour: 1500,
-  parts: 2000,
-};
 
 function MechanicFound() {
   const navigate = useNavigate();
+  const requestId = getCreatedRequestId();
+  const requestDraft = readRequest();
+  const [assignment, setAssignment] = useState(null);
+  const [nearbyMechanics, setNearbyMechanics] = useState([]);
+  const [secondsLeft, setSecondsLeft] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  // Countdown timer in seconds (286 seconds = 04:46)
-  const [secondsLeft, setSecondsLeft] = useState(286);
-
-  // useEffect runs once when the page opens and starts the timer
   useEffect(() => {
+    let active = true;
+
+    const loadMechanicData = async () => {
+      try {
+        if (!requestId) {
+          throw new Error("Your service request is missing. Please submit it again.");
+        }
+
+        const [nearbyData, assignmentData] = await Promise.all([
+          getNearbyMechanics(requestId),
+          getAssignment(requestId),
+        ]);
+        if (!active) return;
+
+        setNearbyMechanics(nearbyData.mechanics);
+        setAssignment(assignmentData);
+        setSecondsLeft(assignmentData.quotation.quotationHoldSeconds);
+      } catch (loadError) {
+        if (active) setError(loadError.message);
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+
+    loadMechanicData();
+    return () => {
+      active = false;
+    };
+  }, [requestId]);
+
+  useEffect(() => {
+    if (!assignment || secondsLeft <= 0) return undefined;
     const timer = setInterval(() => {
-      // reduce 1 second, but never go below 0
-      setSecondsLeft((previous) => (previous > 0 ? previous - 1 : 0));
+      setSecondsLeft((previous) => Math.max(previous - 1, 0));
     }, 1000);
-
-    // Stop the timer when the user leaves this page
     return () => clearInterval(timer);
-  }, []);
+  }, [assignment, secondsLeft]);
 
-  // Turn seconds into "mm:ss" text
   const minutes = String(Math.floor(secondsLeft / 60)).padStart(2, "0");
   const seconds = String(secondsLeft % 60).padStart(2, "0");
+  const mechanic = assignment?.mechanic;
+  const quotation = assignment?.quotation;
 
-  const total = mechanic.labour + mechanic.parts;
-
-  // User accepts the quotation
-  const handleAccept = () => {
-    const saved = JSON.parse(localStorage.getItem("serviceRequest")) || {};
-    const updated = { ...saved, mechanicName: mechanic.name, total: total };
-    localStorage.setItem("serviceRequest", JSON.stringify(updated));
-
-    navigate("/get-help/tracking");
+  const handleQuotationResponse = async (response) => {
+    try {
+      setActionLoading(true);
+      setError("");
+      const result = await respondToQuotation(requestId, response, mechanic.id);
+      if (response === "accepted") {
+        navigate("/get-help/tracking");
+      } else {
+        setNearbyMechanics((mechanics) =>
+          mechanics.filter((item) => item.id !== mechanic.id)
+        );
+        setAssignment((current) => ({
+          ...current,
+          mechanic: result.nextMechanic,
+          noMechanicsAvailable: result.noMoreMechanics,
+        }));
+        if (result.nextMechanic) {
+          setSecondsLeft(quotation.quotationHoldSeconds);
+        }
+      }
+    } catch (actionError) {
+      setError(actionError.message);
+    } finally {
+      setActionLoading(false);
+    }
   };
+
+  if (loading || !assignment || !quotation) {
+    return (
+      <div className="gethelp-page">
+        <DashboardSidebar activeItem="My Requests" />
+        <main className="gethelp-main">
+          <DashboardTopbar />
+          <div className="gethelp-content">
+            {error ? (
+              <p className="form-error" role="alert">{error}</p>
+            ) : (
+              <p role="status">Loading available mechanics and quotation...</p>
+            )}
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (assignment.noMechanicsAvailable || !mechanic) {
+    return (
+      <div className="gethelp-page">
+        <DashboardSidebar activeItem="My Requests" />
+        <main className="gethelp-main">
+          <DashboardTopbar />
+          <div className="gethelp-content">
+            <RequestStepper currentStep={4} />
+            <section className="gethelp-card">
+              <h2>No more mechanics available</h2>
+              <p>All available mechanics have been rejected for this request.</p>
+            </section>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="gethelp-page">
@@ -89,9 +158,9 @@ function MechanicFound() {
           {/* Top strip */}
           <div className="summary-strip">
             <span className="summary-chip green">● Batticaloa East Dispatch</span>
-            <span>Breakdown at Kallady Bridge Causeway (A15 Highway)</span>
+            <span>{requestDraft.location?.address || "Breakdown location"}</span>
             <strong className="summary-step">
-              <ShieldCheck size={13} /> Ticket #BC-84920
+              <ShieldCheck size={13} /> {assignment.requestReference}
             </strong>
           </div>
 
@@ -105,9 +174,9 @@ function MechanicFound() {
 
             <div className="found-banner-text">
               <h2>
-                Mechanic found <span className="accepted-badge">Accepted</span>
+                Mechanic found <span className="accepted-badge">Quotation</span>
               </h2>
-              <p>A verified roadside rescue specialist near Kallady Bridge has accepted your request.</p>
+              <p>{mechanic.name} is available to assist with this request.</p>
             </div>
 
             <div className="found-timer">
@@ -129,7 +198,7 @@ function MechanicFound() {
                   <div>
                     <h2>{mechanic.name}</h2>
                     <span className="verified-badge">
-                      <BadgeCheck size={13} /> RoadMate Verified Partner
+                      <BadgeCheck size={13} /> {mechanic.verified ? "RoadMate Verified Partner" : "RoadMate Partner"}
                     </span>
 
                     <p className="mechanic-rating">
@@ -142,25 +211,16 @@ function MechanicFound() {
                     </p>
 
                     <div className="mechanic-badges">
-                      <span className="distance-badge">● {mechanic.distance}</span>
+                      <span className="distance-badge">● {mechanic.distanceKm} km away</span>
                       <span className="eta-badge">
-                        <Zap size={13} /> {mechanic.eta}
+                        <Zap size={13} /> ETA ~{mechanic.etaMinutes} mins
                       </span>
                     </div>
+                    <p className="mechanic-address">
+                      Vehicle: {mechanic.unit} · {mechanic.plate}
+                    </p>
                   </div>
                 </div>
-
-                {/* Dispatched unit */}
-                {/* <div className="unit-box">
-                  <span className="vehicle-option-icon">
-                    <Truck size={20} />
-                  </span>
-                  <div>
-                    <small>Dispatched Mobile Unit</small>
-                    <strong>{mechanic.unit}</strong>
-                  </div>
-                  <span className="unit-plate">{mechanic.plate}</span>
-                </div> */}
 
                 <h4 className="specialty-title">MECHANIC SPECIALTIES &amp; EQUIPMENT</h4>
                 <div className="specialty-grid">
@@ -173,34 +233,29 @@ function MechanicFound() {
                 </div>
 
                 <div className="trust-list">
-                  <span>
-                    <CircleCheck size={14} /> Phone Verified (+94 77 ••• ••89)
-                  </span>
-                  <span>
-                    <CircleCheck size={14} /> Batticaloa HQ Police Cleared
-                  </span>
-                  <span>
-                    <CircleCheck size={14} /> 12 Years Local Experience
-                  </span>
+                  {mechanic.phoneVerified && <span><CircleCheck size={14} /> Phone Verified</span>}
+                  {mechanic.policeCleared && <span><CircleCheck size={14} /> Police Cleared</span>}
+                  <span><CircleCheck size={14} /> {mechanic.experienceYears} Years Local Experience</span>
                 </div>
               </section>
 
-              {/* Route card (placeholder map) */}
-              {/* <section className="gethelp-card">
-                <div className="route-heading">
-                  <h3>
-                    <Navigation size={15} /> Proximity &amp; Approach Route
-                  </h3>
-                  <span>Via Kallady Bridge Rd</span>
+              <section className="gethelp-card">
+                <h4 className="specialty-title">AVAILABLE MOCK MECHANICS</h4>
+                <div className="specialty-grid">
+                  {nearbyMechanics.map((item) => (
+                    <div className="specialty-item" key={item.id}>
+                      <Wrench size={15} />
+                      <span>
+                        <strong>{item.name}</strong> · {item.available ? "Available" : "Unavailable"} ·
+                        {" "}{item.rating} ({item.reviews} reviews) · {item.address} ·
+                        {" "}{item.distanceKm} km · ETA {item.etaMinutes} mins · {item.unit}
+                        {" "}{item.plate} · {item.specialties.join(", ")}
+                      </span>
+                    </div>
+                  ))}
                 </div>
+              </section>
 
-                <div className="route-map">
-                  <div className="route-status">
-                    <span>● Mechanic en route standby</span>
-                    <strong>2.1 km (8 - 10 min away)</strong>
-                  </div>
-                </div>
-              </section> */}
             </div>
 
             {/* ===== Right column: quotation ===== */}
@@ -221,29 +276,31 @@ function MechanicFound() {
                   <div className="quotation-line">
                     <div>
                       <strong>Labour Charge</strong>
-                      <p>Diagnostic inspection, rapid bridge dispatch &amp; on-site repair labour</p>
+                      <p>{quotation.labourDescription}</p>
                     </div>
-                    {/* toLocaleString adds the comma: 1500 becomes 1,500 */}
-                    <strong>Rs. {mechanic.labour.toLocaleString()}</strong>
+                    <strong>Rs. {quotation.labour.toLocaleString()}</strong>
                   </div>
 
                   <div className="quotation-line">
                     <div>
                       <strong>Parts &amp; Consumables</strong>
-                      <p>
-                        Heavy-duty puncture repair plugs, valve seal replacement &amp; nitrogen
-                        refill
-                      </p>
+                      <p>{quotation.partsDescription}</p>
                     </div>
-                    <strong>Rs. {mechanic.parts.toLocaleString()}</strong>
+                    <strong>Rs. {quotation.parts.toLocaleString()}</strong>
                   </div>
+                  {quotation.additionalCharges > 0 && (
+                    <div className="quotation-line">
+                      <strong>Additional Charges</strong>
+                      <strong>Rs. {quotation.additionalCharges.toLocaleString()}</strong>
+                    </div>
+                  )}
 
                   <div className="quotation-total">
                     <div>
                       <small>TOTAL ESTIMATED AMOUNT</small>
-                      <span>All taxes &amp; roadside fees included</span>
+                      <span>{quotation.estimatedServiceMinutes} mins estimated service time</span>
                     </div>
-                    <strong>Rs. {total.toLocaleString()}</strong>
+                    <strong>Rs. {quotation.total.toLocaleString()}</strong>
                   </div>
                 </div>
 
@@ -274,16 +331,6 @@ function MechanicFound() {
                 </p>
               </section>
 
-              {/* <section className="gethelp-card review-quote">
-                <span className="vehicle-option-icon">
-                  <MessageSquareQuote size={20} />
-                </span>
-                <p>
-                  <strong>"Arrived in 9 mins near Kallady bridge at 9 PM. Very polite."</strong>
-                  <br />
-                  S. Mahendran • Nissan Sunny Tyre Replacement (3 days ago)
-                </p>
-              </section> */}
             </div>
           </div>
 
@@ -298,17 +345,24 @@ function MechanicFound() {
             </div>
 
             <div className="gh-bottom-right">
+              {error && <p className="form-error" role="alert">{error}</p>}
               <button
                 type="button"
                 className="gh-back-button"
-                onClick={() => navigate("/get-help/problem")}
+                onClick={() => handleQuotationResponse("rejected")}
+                disabled={actionLoading || !mechanic}
               >
                 <X size={16} />
-                Reject / Find Another Mechanic
+                Reject Mechanic &amp; Find Next
               </button>
 
-              <button type="button" className="gh-next-button" onClick={handleAccept}>
-                Accept Quotation &amp; Track Mechanic
+              <button
+                type="button"
+                className="gh-next-button"
+                onClick={() => handleQuotationResponse("accepted")}
+                disabled={actionLoading || !mechanic}
+              >
+                {actionLoading ? "Saving..." : "Accept Mechanic & Track"}
                 <ArrowRight size={16} />
               </button>
             </div>

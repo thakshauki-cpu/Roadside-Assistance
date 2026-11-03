@@ -27,7 +27,12 @@ import {
 import DashboardSidebar from "../../Dashboard/Sidebar";
 import DashboardTopbar from "../../Dashboard/Topbar";
 import RequestStepper from "../../gethelp/RequestStepper";
-import { mechanic, issueDetails, defaultPrices, formatRs, timeText, readRequest } from "./requestSampleData";
+import { getAssignment, getTracking } from "../../../api/getHelp";
+import {
+  formatRs,
+  getCreatedRequestId,
+  readRequest,
+} from "./requestSampleData";
 import "../../styles/GetHelp.css";
 import "../../styles/Tracking.css";
 
@@ -45,49 +50,96 @@ const mechanicFiles = import.meta.glob("../../../assets/mechanic-siva.{png,jpg,j
 const mapImage = Object.values(mapFiles)[0];
 const mechanicImage = Object.values(mechanicFiles)[0];
 
-// ----- Simulation settings (tracking)(change these to make the demo faster or slower) -----
-const TOTAL_MINUTES = 10; // starting ETA shown to the customer
-const TOTAL_KM = 1.8; // starting distance
-const SECONDS_PER_MINUTE = 2; // 1 "minute" on screen passes in 2 real seconds
-
-// Where the van pin starts and where the breakdown pin is (percent of the map box)
-const VAN_START = { x: 38, y: 55 };
-const BREAKDOWN = { x: 71.5, y: 33.5 };
+const SECONDS_PER_MINUTE = 2;
 
 function Tracking() {
   const navigate = useNavigate();
-
-  // Data saved by the earlier steps
+  const requestId = getCreatedRequestId();
   const saved = readRequest();
-  const plate = saved.plate || "EP CAB 1234";
-  const issue = issueDetails[saved.issue] || issueDetails.Puncture;
-  const quoted = saved.total || defaultPrices.labour + defaultPrices.parts;
-
-  // Seconds since this page opened. Everything live on the page is worked out from it.
+  const plate = saved.vehicle?.registrationNumber || "Vehicle";
   const [elapsed, setElapsed] = useState(0);
   const [notice, setNotice] = useState("");
+  const [tracking, setTracking] = useState(null);
+  const [assignment, setAssignment] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  // Times shown in the milestone list. useState keeps them fixed while the page is open.
-  const [dispatchedAt] = useState(() => timeText(0));
-  const [expectedAt] = useState(() => timeText(TOTAL_MINUTES));
+  useEffect(() => {
+    let active = true;
+    const loadTracking = async () => {
+      try {
+        if (!requestId) {
+          throw new Error("Your service request is missing. Please submit it again.");
+        }
+        const [trackingData, assignmentData] = await Promise.all([
+          getTracking(requestId),
+          getAssignment(requestId),
+        ]);
+        if (!active) return;
+        setTracking(trackingData);
+        setAssignment(assignmentData);
+      } catch (loadError) {
+        if (active) setError(loadError.message);
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
 
-  // Start a 1 second timer when the page opens, stop it when the page closes
+    loadTracking();
+    return () => {
+      active = false;
+    };
+  }, [requestId]);
+
   useEffect(() => {
     const timer = setInterval(() => setElapsed((previous) => previous + 1), 1000);
     return () => clearInterval(timer);
   }, []);
 
-  // Work out the live values
-  const minutesPassed = Math.floor(elapsed / SECONDS_PER_MINUTE);
-  const etaMinutes = Math.max(0, TOTAL_MINUTES - minutesPassed);
-  const arrived = etaMinutes === 0;
-  const progress = 1 - etaMinutes / TOTAL_MINUTES; // 0 at start, 1 when arrived
-  const kmLeft = (TOTAL_KM * etaMinutes) / TOTAL_MINUTES;
-  const refreshedAgo = elapsed % 5; // "Refreshed 0-4s ago"
+  if (loading || !tracking || !assignment) {
+    return (
+      <div className="gethelp-page">
+        <DashboardSidebar activeItem="My Requests" />
+        <main className="gethelp-main">
+          <DashboardTopbar />
+          <div className="gethelp-content">
+            {error ? (
+              <p className="form-error" role="alert">{error}</p>
+            ) : (
+              <p role="status">Loading mechanic tracking...</p>
+            )}
+          </div>
+        </main>
+      </div>
+    );
+  }
 
-  // Position of the van pin on the map (moves towards the breakdown pin)
-  const vanX = VAN_START.x + (BREAKDOWN.x - VAN_START.x) * progress;
-  const vanY = VAN_START.y + (BREAKDOWN.y - VAN_START.y) * progress;
+  const mechanic = tracking.mechanic;
+  const etaMinutes = Math.max(
+    0,
+    tracking.etaMinutes - Math.floor(elapsed / SECONDS_PER_MINUTE)
+  );
+  const arrived = etaMinutes === 0;
+  const progress =
+    tracking.etaMinutes === 0
+      ? 1
+      : 1 - etaMinutes / tracking.etaMinutes;
+  const kmLeft = tracking.distanceRemainingKm * (1 - progress);
+  const refreshedAgo = elapsed % 5;
+  const vanX =
+    tracking.vanPosition.x +
+    (tracking.breakdownPosition.x - tracking.vanPosition.x) * progress;
+  const vanY =
+    tracking.vanPosition.y +
+    (tracking.breakdownPosition.y - tracking.vanPosition.y) * progress;
+  const dispatchedAt = new Date(tracking.dispatchedAt).toLocaleTimeString(
+    "en-US",
+    { hour: "numeric", minute: "2-digit" }
+  );
+  const expectedAt = new Date(tracking.expectedArrivalAt).toLocaleTimeString(
+    "en-US",
+    { hour: "numeric", minute: "2-digit" }
+  );
 
   // The 4 milestones. status: "done", "active" or "pending"
   const stage = arrived ? 3 : 2;
@@ -119,6 +171,7 @@ function Tracking() {
   const handleCancel = () => {
     if (window.confirm("Do you want to cancel this request?")) {
       localStorage.removeItem("serviceRequest");
+      localStorage.removeItem("createdServiceRequest");
       navigate("/dashboard");
     }
   };
@@ -137,18 +190,18 @@ function Tracking() {
           <section className="track-header">
             <div>
               <div className="track-meta">
-                <span>Request #RM-BT-8921</span>
+                <span>Request #{tracking.requestReference}</span>
                 <span>•</span>
-                <span>Batticaloa Central Dispatch</span>
+                <span>{tracking.startingLocation}</span>
                 <span>•</span>
-                <span className="track-live-text">Live Telemetry</span>
+                <span className="track-live-text">Mock Tracking</span>
               </div>
               <h1>{arrived ? "Mechanic has arrived" : "Mechanic is on the way"}</h1>
             </div>
 
             <span className="track-gps-pill">
               <span className="track-gps-dot" />
-              Live GPS Connected • Refreshed {refreshedAgo}s ago
+              Mock dispatch • Updated {refreshedAgo}s ago
             </span>
           </section>
 
@@ -167,22 +220,28 @@ function Tracking() {
 
                 {/* Dashed blue route from the van to the breakdown spot */}
                 <svg className="track-route" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-                  <line x1="24" y1="80" x2="85" y2="22" className="track-route-road" />
-                  <line x1={vanX} y1={vanY} x2={BREAKDOWN.x} y2={BREAKDOWN.y} className="track-route-line" />
+                  <line
+                    x1={tracking.roadPath.start.x}
+                    y1={tracking.roadPath.start.y}
+                    x2={tracking.roadPath.end.x}
+                    y2={tracking.roadPath.end.y}
+                    className="track-route-road"
+                  />
+                  <line x1={vanX} y1={vanY} x2={tracking.breakdownPosition.x} y2={tracking.breakdownPosition.y} className="track-route-line" />
                 </svg>
 
                 {/* Top floating box */}
                 <div className="track-floater">
                   <span className="track-floater-road">
-                    <Navigation size={15} /> A15 Highway / Bar Road
+                    <Navigation size={15} /> {tracking.routeDescription}
                   </span>
                   <span className="track-divider" />
                   <span>
-                    <Gauge size={14} /> Speed: <b>{arrived ? 0 : 34} km/h</b>
+                    <Gauge size={14} /> Speed: <b>{arrived ? 0 : tracking.speedKmh} km/h</b>
                   </span>
                   <span className="track-divider" />
                   <span>
-                    <TrafficCone size={14} /> Traffic: <b className="track-green">Light Flow</b>
+                    <TrafficCone size={14} /> Traffic: <b className="track-green">{tracking.traffic}</b>
                   </span>
                 </div>
 
@@ -205,7 +264,7 @@ function Tracking() {
                 {/* Mechanic pin. Its position is set from the live values above. */}
                 <div className="track-pin track-pin-van" style={{ left: vanX + "%", top: vanY + "%" }}>
                   <span className="track-pin-label track-pin-label-blue">
-                    <Truck size={13} /> Siva ({mechanic.unit.split(" ")[0]} {mechanic.plate})
+                    <Truck size={13} /> {mechanic.name} ({mechanic.plate})
                   </span>
                   <span className="track-pin-circle track-pin-circle-blue">
                     <Wrench size={15} />
@@ -213,7 +272,7 @@ function Tracking() {
                 </div>
 
                 {/* Customer breakdown pin */}
-                <div className="track-pin track-pin-user" style={{ left: BREAKDOWN.x + "%", top: BREAKDOWN.y + "%" }}>
+                <div className="track-pin track-pin-user" style={{ left: tracking.breakdownPosition.x + "%", top: tracking.breakdownPosition.y + "%" }}>
                   <span className="track-pin-label track-pin-label-dark">
                     <span className="track-red-dot" /> Your Breakdown ({plate})
                   </span>
@@ -225,7 +284,7 @@ function Tracking() {
                 {/* Bottom banner */}
                 <div className="track-banner">
                   <span>
-                    <Navigation size={13} /> Heading South on A15 via Kallady Causeway
+                    <Navigation size={13} /> {tracking.routeDescription}
                   </span>
                   <strong>{arrived ? "Arrived" : kmLeft.toFixed(1) + " km remaining"}</strong>
                 </div>
@@ -270,7 +329,10 @@ function Tracking() {
                       </>
                     )}
                   </p>
-                  <small>Expected at Kallady: {expectedAt}</small>
+                  <small>
+                    Expected at {tracking.breakdownLocation.landmark ||
+                      tracking.breakdownLocation.address}: {expectedAt}
+                  </small>
                 </div>
                 <span className="track-eta-icon">
                   <Timer size={26} />
@@ -284,8 +346,8 @@ function Tracking() {
                     {mechanicImage ? (
                       <img className="track-photo" src={mechanicImage} alt={mechanic.name} />
                     ) : (
-                      <span className="track-photo track-photo-missing" title="Add src/assets/mechanic-siva.png">
-                        SA
+                      <span className="track-photo track-photo-missing">
+                        {mechanic.name.slice(0, 2).toUpperCase()}
                       </span>
                     )}
                     <span className="track-photo-badge">
@@ -331,7 +393,7 @@ function Tracking() {
                 <div className="track-contact">
                   {/* tel: opens the phone dialer on a mobile */}
                   <a href={"tel:" + mechanic.phone} className="track-call">
-                    <Phone size={15} /> Call Siva
+                    <Phone size={15} /> Call {mechanic.name}
                   </a>
                   <button type="button" className="track-message" onClick={() => showNotice("Chat with the mechanic will be added later.")}>
                     <MessageSquare size={16} /> Message
@@ -372,7 +434,7 @@ function Tracking() {
                 Back to Quotation Details
               </button>
               <span>
-                Quoted: {formatRs(quoted)} ({issue.work})
+                Quoted: {formatRs(assignment.quotation.total)} ({saved.issue || "Service request"})
               </span>
             </div>
 

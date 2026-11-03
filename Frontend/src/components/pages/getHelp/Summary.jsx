@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Check,
@@ -21,7 +21,18 @@ import {
 import DashboardSidebar from "../../Dashboard/Sidebar";
 import DashboardTopbar from "../../Dashboard/Topbar";
 import RequestStepper from "../../gethelp/RequestStepper";
-import { mechanic, issueDetails, defaultPrices, formatRs, timeText, readRequest } from "./requestSampleData";
+import {
+  getAssignment,
+  getCompletion,
+  getServiceSummary,
+  submitMockPayment,
+} from "../../../api/getHelp";
+import {
+  formatRs,
+  getCreatedRequestId,
+  readCreatedRequest,
+  readRequest,
+} from "./requestSampleData";
 import "../../styles/GetHelp.css";
 import "../../styles/Summary.css";
 
@@ -32,9 +43,8 @@ const mechanicFiles = import.meta.glob("../../../assets/mechanic-siva.{png,jpg,j
 });
 const mechanicImage = Object.values(mechanicFiles)[0];
 
-// The 3 payment choices
 const paymentMethods = [
-  { id: "cash", name: "Cash", text: "Handover cash to Siva on-site", icon: Banknote },
+  { id: "cash", name: "Cash", text: "Hand over cash on-site", icon: Banknote },
   { id: "card", name: "Card POS", text: "Visa / Mastercard / LankaPay", icon: CreditCard },
   { id: "qr", name: "QR / Digital", text: "FriMi, Koko, Genie & LANKAQR", icon: QrCode },
 ];
@@ -50,17 +60,15 @@ const tipOptions = [0, 200, 500];
 
 function Summary() {
   const navigate = useNavigate();
-
-  // Data saved by the earlier steps (with sample values if something is missing)
-  const saved = readRequest();
-  const issue = issueDetails[saved.issue] || issueDetails.Puncture;
-  const plate = saved.plate || "EP CAB 1234";
-  const vehicle = (saved.model ? saved.model.split(" - ")[0] : "Toyota Axio") + " (" + plate + ")";
-  const place = saved.landmark || "Kallady Bridge, Batticaloa";
-
-  // Price lines. The Quotation step saved one total, so we split it like the quotation did.
-  const labour = saved.total ? Math.min(defaultPrices.labour, saved.total) : defaultPrices.labour;
-  const parts = saved.total ? saved.total - labour : defaultPrices.parts;
+  const requestId = getCreatedRequestId();
+  const draft = readRequest();
+  const createdRequest = readCreatedRequest();
+  const [assignment, setAssignment] = useState(null);
+  const [completion, setCompletion] = useState(null);
+  const [summary, setSummary] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  const [error, setError] = useState("");
 
   // Things the customer can change on this page
   const [payment, setPayment] = useState("cash");
@@ -71,11 +79,73 @@ function Summary() {
   const [customOpen, setCustomOpen] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
-  // Time of completion is fixed while the page is open
-  const [completedAt] = useState(() => timeText(0));
+  useEffect(() => {
+    let active = true;
+    const loadSettlementData = async () => {
+      try {
+        if (!requestId) {
+          throw new Error("Your service request is missing. Please submit it again.");
+        }
+        const [assignmentData, completionData] = await Promise.all([
+          getAssignment(requestId),
+          getCompletion(requestId),
+        ]);
+        if (active) {
+          setAssignment(assignmentData);
+          setCompletion(completionData.completion);
+        }
+      } catch (loadError) {
+        if (active) setError(loadError.message);
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
 
-  const serviceTotal = labour + parts;
-  const grandTotal = serviceTotal + tip;
+    loadSettlementData();
+    return () => {
+      active = false;
+    };
+  }, [requestId]);
+
+  const mechanic =
+    summary?.mechanic || completion?.mechanic || assignment?.mechanic;
+  const quotation = summary?.quotation || assignment?.quotation;
+  const issueName = summary?.problem || createdRequest.problem || "Service request";
+  const issueTitle = completion?.problemTitle || issueName;
+  const issueWork = completion?.workCompleted || "";
+  const description =
+    summary?.description || createdRequest.description || "";
+  const vehicleData = summary?.vehicle || draft.vehicle || {};
+  const vehicleLabel = vehicleData.registrationNumber
+    ? `${vehicleData.model || vehicleData.vehicleType} (${vehicleData.registrationNumber})`
+    : vehicleData.model || vehicleData.vehicleType || "Vehicle";
+  const place =
+    summary?.location?.address ||
+    createdRequest.location?.address ||
+    draft.location?.address ||
+    "Location";
+  const labour = quotation?.labour || 0;
+  const parts = quotation?.parts || 0;
+  const additionalCharges = quotation?.additionalCharges || 0;
+  const serviceTotal = quotation?.total || labour + parts + additionalCharges;
+  const completedDate = completion?.completedAt
+    ? new Date(completion.completedAt)
+    : null;
+  const completedAt = completedDate
+    ? completedDate.toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+      })
+    : "";
+  const completedOn = completedDate
+    ? completedDate.toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      })
+    : "";
+
+  const grandTotal = summary?.payment?.amount || serviceTotal + tip;
 
   // Add the tag if it is not selected, remove it if it is
   const toggleTag = (tag) => {
@@ -91,28 +161,60 @@ function Summary() {
   // The browser print window lets the user save the page as a PDF
   const handleDownload = () => window.print();
 
-  const handlePay = () => {
-    const updated = {
-      ...saved,
-      paymentMethod: payment,
-      rating: rating,
-      feedbackTags: tags,
-      review: review,
-      tip: tip,
-      totalPaid: grandTotal,
-      completedAt: completedAt,
-    };
-    localStorage.setItem("serviceRequest", JSON.stringify(updated));
-    setSubmitted(true);
+  const loadSummary = async () => {
+    try {
+      setError("");
+      const summaryData = await getServiceSummary(requestId);
+      setSummary(summaryData);
+      setTimeout(() => {
+        localStorage.removeItem("serviceRequest");
+        localStorage.removeItem("createdServiceRequest");
+        navigate("/dashboard");
+      }, 1800);
+    } catch (summaryError) {
+      setError(`Payment is confirmed, but the service summary could not load: ${summaryError.message}`);
+    }
+  };
 
-    // Show the thank you message for a moment, then go to the dashboard
-    setTimeout(() => {
-      localStorage.removeItem("serviceRequest"); // so the next request starts fresh
-      navigate("/dashboard");
-    }, 1800);
+  const handlePay = async () => {
+    try {
+      setPaymentLoading(true);
+      setError("");
+      await submitMockPayment(requestId, {
+        paymentMethod: payment,
+        tip,
+        rating,
+        feedbackTags: tags,
+        review,
+      });
+      setSubmitted(true);
+      await loadSummary();
+    } catch (paymentError) {
+      setError(paymentError.message);
+    } finally {
+      setPaymentLoading(false);
+    }
   };
 
   const isCustomTip = customOpen || !tipOptions.includes(tip);
+
+  if (loading || !completion || !assignment || !mechanic || !quotation) {
+    return (
+      <div className="gethelp-page">
+        <DashboardSidebar activeItem="My Requests" />
+        <main className="gethelp-main">
+          <DashboardTopbar />
+          <div className="gethelp-content">
+            {error ? (
+              <p className="form-error" role="alert">{error}</p>
+            ) : (
+              <p role="status">Loading service completion and quotation...</p>
+            )}
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="gethelp-page">
@@ -136,15 +238,15 @@ function Summary() {
               <div className="done-title-row">
                 <h1>Service Completed</h1>
                 <span className="done-verified">
-                  <span className="done-verified-dot" /> Resolution Verified
+                  <span className="done-verified-dot" /> {completion.status}
                 </span>
               </div>
               <p className="done-text">
                 <strong>{mechanic.name}</strong> has completed your roadside repair successfully on {place}.
               </p>
               <p className="done-meta">
-                <Clock size={13} /> Completed Today, {completedAt} <span>•</span> Response Time: 9 mins <span>•</span>{" "}
-                Batticaloa Operational Base
+                <Clock size={13} /> Completed {completedOn}, {completedAt} <span>•</span> Response Time: {completion.responseTimeMinutes} mins <span>•</span>{" "}
+                {mechanic.depot}
               </p>
             </div>
           </section>
@@ -158,7 +260,9 @@ function Summary() {
                   <h2>
                     <ClipboardList size={18} /> Job &amp; Service Summary
                   </h2>
-                  <span className="done-invoice">LK-9021</span>
+                  <span className="done-invoice">
+                    {summary?.requestReference || completion.requestReference}
+                  </span>
                 </div>
 
                 <div className="done-two">
@@ -167,8 +271,9 @@ function Summary() {
                     <div className="done-tile-row">
                       <CircleDot size={18} className="done-red" />
                       <div>
-                        <strong>{issue.title}</strong>
-                        <p>{issue.work}</p>
+                        <strong>{completion.problemTitle || issueTitle}</strong>
+                        <p>{issueWork}</p>
+                        {description && <p>{description}</p>}
                       </div>
                     </div>
                   </div>
@@ -178,7 +283,7 @@ function Summary() {
                     <div className="done-tile-row">
                       <CarFront size={18} className="done-blue" />
                       <div>
-                        <strong>{vehicle}</strong>
+                        <strong>{vehicleLabel}</strong>
                         <p>{place}</p>
                       </div>
                     </div>
@@ -191,8 +296,8 @@ function Summary() {
                     {mechanicImage ? (
                       <img className="done-photo" src={mechanicImage} alt={mechanic.name} />
                     ) : (
-                      <span className="done-photo done-photo-missing" title="Add src/assets/mechanic-siva.png">
-                        SA
+                      <span className="done-photo done-photo-missing">
+                        {mechanic.name.slice(0, 2).toUpperCase()}
                       </span>
                     )}
                     <div>
@@ -215,16 +320,22 @@ function Summary() {
                 {/* Price lines */}
                 <div className="done-prices">
                   <div>
-                    <span>Labour, Jacking &amp; Safety Inspection</span>
+                  <span>Labour</span>
                     <b>{formatRs(labour)}</b>
                   </div>
                   <div>
-                    <span>High-Grade Parts &amp; Materials</span>
+                  <span>Parts &amp; Materials</span>
                     <b>{formatRs(parts)}</b>
                   </div>
+                {additionalCharges > 0 && (
                   <div className="done-small">
-                    <span>Emergency Dispatch Surcharge (Batticaloa Municipality)</span>
-                    <b className="done-green">Rs. 0 (Waived)</b>
+                    <span>Additional Charges</span>
+                    <b>{formatRs(additionalCharges)}</b>
+                  </div>
+                )}
+                <div className="done-small">
+                  <span>Service Estimate</span>
+                  <b className="done-green">{quotation.estimatedServiceMinutes} mins</b>
                   </div>
                   {tip > 0 && (
                     <div className="done-small">
@@ -236,7 +347,7 @@ function Summary() {
                   <div className="done-total">
                     <div>
                       <strong>Total Amount Due</strong>
-                      <small>Includes all municipal field taxes</small>
+                      <small>Mock quotation total plus selected tip</small>
                     </div>
                     <span>{formatRs(grandTotal)}</span>
                   </div>
@@ -249,11 +360,15 @@ function Summary() {
                   <h2>
                     <CreditCard size={18} /> Select Payment Method
                   </h2>
-                  <span className="done-zero">Zero Surcharge</span>
+                  <span className="done-zero">
+                    {additionalCharges > 0
+                      ? `${formatRs(additionalCharges)} additional charges`
+                      : "No additional charges"}
+                  </span>
                 </div>
 
                 <p className="done-help">
-                  Choose how you wish to settle this repair directly with Siva. All payments provide an instant
+                  Choose how you wish to settle this repair directly with {mechanic.name}. This mock payment provides an instant
                   verified digital tax receipt.
                 </p>
 
@@ -280,9 +395,14 @@ function Summary() {
                 </div>
 
                 <p className="done-secure">
-                  <ShieldCheck size={14} /> 100% Secure Roadside Settlement • RoadMate Invoice #LK-9021 verified
-                  &amp; archived
+                  <ShieldCheck size={14} /> Mock settlement • Request {summary?.requestReference || completion.requestReference}
                 </p>
+                {summary?.payment && (
+                  <p className="done-secure" role="status">
+                    Mock payment {summary.payment.status} by {summary.payment.method.toUpperCase()}.
+                    Confirmation: {summary.payment.confirmationCode}
+                  </p>
+                )}
               </section>
             </div>
 
@@ -298,12 +418,14 @@ function Summary() {
                   {mechanicImage ? (
                     <img className="done-photo done-photo-small" src={mechanicImage} alt={mechanic.name} />
                   ) : (
-                    <span className="done-photo done-photo-small done-photo-missing">SA</span>
+                    <span className="done-photo done-photo-small done-photo-missing">
+                      {mechanic.name.slice(0, 2).toUpperCase()}
+                    </span>
                   )}
                   <div>
                     <strong>{mechanic.name}</strong>
                     <p>
-                      <span className="done-green">Arrived in 9 mins</span> • Puncture Specialist
+                      <span className="done-green">Arrived in {completion.responseTimeMinutes} mins</span> • {completion.problemTitle}
                     </p>
                   </div>
                 </div>
@@ -345,7 +467,7 @@ function Summary() {
 
                 {/* Review */}
                 <label className="done-label" htmlFor="review">
-                  Message or Review for Siva
+                  Message or Review for {mechanic.name}
                 </label>
                 <textarea
                   id="review"
@@ -357,7 +479,7 @@ function Summary() {
 
                 {/* Tip */}
                 <div className="done-tip-top">
-                  <span className="done-label">Add a tip for Siva (Optional)</span>
+                  <span className="done-label">Add a tip for {mechanic.name} (Optional)</span>
                   <span className="done-green">100% goes to mechanic</span>
                 </div>
                 <div className="done-tip-row">
@@ -401,7 +523,7 @@ function Summary() {
               </span>
               <div>
                 <strong>Settlement Ready</strong>
-                <p>Tax receipt will be sent automatically to your registered phone &amp; email.</p>
+                <p>A mock payment confirmation will be generated for this demo request.</p>
               </div>
             </div>
 
@@ -409,12 +531,32 @@ function Summary() {
               <button type="button" className="done-download" onClick={handleDownload}>
                 <Download size={14} /> Download Invoice PDF
               </button>
-              <button type="button" className="gh-next-button" onClick={handlePay} disabled={submitted}>
+              <button
+                type="button"
+                className="gh-next-button"
+                onClick={handlePay}
+                disabled={submitted || paymentLoading}
+              >
                 <Check size={16} />
-                {submitted ? "Submitted. Thank you!" : "Pay & Submit (" + formatRs(grandTotal) + ")"}
+                {paymentLoading
+                  ? "Processing mock payment..."
+                  : submitted
+                  ? "Submitted. Thank you!"
+                  : "Pay & Submit (" + formatRs(grandTotal) + ")"}
               </button>
+              {submitted && !summary && (
+                <button
+                  type="button"
+                  className="done-download"
+                  onClick={loadSummary}
+                >
+                  Retry loading summary
+                </button>
+              )}
             </div>
           </section>
+
+          {error && <p className="form-error" role="alert">{error}</p>}
 
           <p className="done-footnote">
             <Headset size={15} /> Need help with this bill or experienced an issue?{" "}

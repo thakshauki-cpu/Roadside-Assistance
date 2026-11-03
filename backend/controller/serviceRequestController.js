@@ -31,6 +31,22 @@ export const createServiceRequest = async (req, res) => {
       });
     }
 
+    const coordinates = location.coordinates;
+    if (
+      coordinates !== undefined &&
+      (!Array.isArray(coordinates) ||
+        coordinates.length !== 2 ||
+        !coordinates.every(Number.isFinite) ||
+        coordinates[0] < -180 ||
+        coordinates[0] > 180 ||
+        coordinates[1] < -90 ||
+        coordinates[1] > 90)
+    ) {
+      return res.status(400).json({
+        message: "Please provide valid longitude and latitude coordinates.",
+      });
+    }
+
     // Get vehicle details
     const {
       vehicleType,
@@ -52,29 +68,65 @@ export const createServiceRequest = async (req, res) => {
       });
     }
 
-    // Create Vehicle
-    createdVehicle = await Vehicle.create({
-      user: req.user,
-      vehicleType,
+    const normalizedRegistrationNumber = registrationNumber?.trim().toUpperCase();
+    let serviceVehicle;
 
-      ...(model?.trim() && {
-        model: model.trim(),
-      }),
+    if (normalizedRegistrationNumber) {
+      serviceVehicle = await Vehicle.findOne({
+        user: req.user,
+        registrationNumber: normalizedRegistrationNumber,
+      });
 
-      ...(registrationNumber?.trim() && {
-        registrationNumber: registrationNumber.trim().toUpperCase(),
-      }),
-    });
+      if (serviceVehicle) {
+        serviceVehicle.vehicleType = vehicleType;
+        if (model?.trim()) {
+          serviceVehicle.model = model.trim();
+        }
+        await serviceVehicle.save();
+      }
+    }
+
+    if (!serviceVehicle) {
+      try {
+        createdVehicle = await Vehicle.create({
+          user: req.user,
+          vehicleType,
+
+          ...(model?.trim() && {
+            model: model.trim(),
+          }),
+
+          ...(normalizedRegistrationNumber && {
+            registrationNumber: normalizedRegistrationNumber,
+          }),
+        });
+        serviceVehicle = createdVehicle;
+      } catch (error) {
+        if (
+          error.code === 11000 &&
+          error.keyPattern?.registrationNumber &&
+          normalizedRegistrationNumber
+        ) {
+          return res.status(409).json({
+            message:
+              "This registration number is already linked to another account. Check the number and try again.",
+          });
+        }
+
+        throw error;
+      }
+    }
 
     // Create Service Request
     const serviceRequest = await ServiceRequest.create({
       customer: req.user,
-      vehicle: createdVehicle._id,
+      vehicle: serviceVehicle._id,
 
       location: {
         address: location.address.trim(),
         landmark: location.landmark || "",
         details: location.details || "",
+        ...(coordinates && { coordinates }),
       },
 
       problem: problem.trim(),

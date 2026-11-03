@@ -6,6 +6,7 @@ import dashboardRoutes from "./routes/dashboardRoutes.js";
 import mechanicRoutes from "./routes/mechanicRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
+import getHelpRoutes from "./routes/getHelpRoutes.js";
 const app = express();
 
 //Middlewaree
@@ -34,5 +35,7 @@ app.use("/api/admin", adminRoutes);
 // Notification routes
 app.use("/api/notifications", notificationRoutes);
 
+// Get Help workflow mock stages
+app.use("/api/get-help", getHelpRoutes);
 
 export default app;

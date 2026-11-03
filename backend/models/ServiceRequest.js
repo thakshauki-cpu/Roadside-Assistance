@@ -34,6 +34,21 @@ const serviceRequestSchema = new mongoose.Schema(
     trim: true,
     default: "",
   },
+  coordinates: {
+    type: [Number],
+    default: undefined,
+    validate: {
+      validator: (coordinates) =>
+        coordinates === undefined ||
+        (coordinates.length === 2 &&
+          coordinates.every(Number.isFinite) &&
+          coordinates[0] >= -180 &&
+          coordinates[0] <= 180 &&
+          coordinates[1] >= -90 &&
+          coordinates[1] <= 90),
+      message: "Location coordinates must contain longitude and latitude.",
+    },
+  },
      
     },
 
