@@ -1,43 +1,120 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 
 import {
   CircleDollarSign,
   CheckCircle2,
   Clock3,
-  ShieldAlert,
-  UserRound,
   MapPin,
-  Navigation,
-  Phone,
-  Flag,
 } from "lucide-react";
 
 import MechanicSidebar from "../../Mechanic/MechanicSidebar";
 import MechanicTopbar from "../../Mechanic/Topbar";
+import {
+  getMechanicProfile,
+  getPendingServiceRequests,
+  updateMechanicAvailability,
+} from "../../../api/mechanic";
 
 import "../../styles/Mechanic/MechanicDashboard.css";
 
 function MechanicDashboard() {
+  const [profile, setProfile] = useState(null);
+  const [availabilityLoading, setAvailabilityLoading] = useState(true);
+  const [availabilityUpdating, setAvailabilityUpdating] = useState(false);
+  const [availabilityError, setAvailabilityError] = useState("");
+  const [requests, setRequests] = useState([]);
+  const [requestsLoading, setRequestsLoading] = useState(true);
+  const [requestsError, setRequestsError] = useState("");
 
-  const user = JSON.parse(
-    localStorage.getItem("user") || "{}"
-  );
+  useEffect(() => {
+    let active = true;
 
-  const mechanicName = user.fullName || "Mechanic";
+    getMechanicProfile()
+      .then(({ profile: mechanicProfile }) => {
+        if (active) {
+          setProfile(mechanicProfile);
+        }
+      })
+      .catch((error) => {
+        if (active) {
+          setAvailabilityError(error.message);
+        }
+      })
+      .finally(() => {
+        if (active) {
+          setAvailabilityLoading(false);
+        }
+      });
 
-  const [arrived, setArrived] = useState(false);
+    getPendingServiceRequests()
+      .then(({ requests: pendingRequests }) => {
+        if (active) {
+          setRequests(pendingRequests);
+        }
+      })
+      .catch((error) => {
+        if (active) {
+          setRequestsError(error.message);
+        }
+      })
+      .finally(() => {
+        if (active) {
+          setRequestsLoading(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const handleToggleAvailability = useCallback(async () => {
+    if (!profile || availabilityUpdating) {
+      return;
+    }
+
+    setAvailabilityUpdating(true);
+    setAvailabilityError("");
+    try {
+      const { isAvailable } = await updateMechanicAvailability(
+        !profile.isAvailable
+      );
+      setProfile((currentProfile) =>
+        currentProfile
+          ? { ...currentProfile, isAvailable }
+          : currentProfile
+      );
+    } catch (error) {
+      setAvailabilityError(error.message);
+    } finally {
+      setAvailabilityUpdating(false);
+    }
+  }, [availabilityUpdating, profile]);
+
+  const mechanicName = profile?.user?.fullName || "Mechanic";
 
   return (
     <div className="mechanic-dashboard">
 
       {/* Reusable Sidebar */}
-      <MechanicSidebar activeItem="Dashboard" />
+      <MechanicSidebar
+        activeItem="Dashboard"
+        pendingCount={requests.length}
+        isAvailable={profile?.isAvailable}
+        availabilityLoading={availabilityLoading}
+        availabilityUpdating={availabilityUpdating}
+        availabilityError={availabilityError}
+        onToggleAvailability={
+          profile ? handleToggleAvailability : undefined
+        }
+      />
 
       {/* Main section */}
       <main className="mechanic-main">
 
         {/* Reusable Topbar */}
-        <MechanicTopbar />
+        <MechanicTopbar mechanicName={mechanicName} />
 
         {/* Welcome section */}
         <section className="mechanic-welcome">
@@ -162,167 +239,59 @@ function MechanicDashboard() {
         {/* Main work area */}
         <section className="mechanic-work-area">
 
-          {/* Urgent dispatch */}
-          <div className="urgent-dispatch-card">
-
-            <div className="urgent-heading">
-
-              <div className="urgent-alert">
-                <ShieldAlert size={19} />
+          <section className="dashboard-requests">
+            <header className="dashboard-requests-heading">
+              <div>
+                <h3>Pending Service Requests</h3>
+                <p>{requests.length} requests waiting for dispatch</p>
               </div>
+              <Link to="/mechanic/requests">View all requests</Link>
+            </header>
 
-              <div className="urgent-title">
-                <h3>Urgent Live Dispatch</h3>
+            {requestsLoading && (
+              <p className="dashboard-requests-state" role="status">
+                Loading pending requests...
+              </p>
+            )}
+            {requestsError && (
+              <p className="dashboard-requests-error" role="alert">
+                {requestsError}
+              </p>
+            )}
+            {!requestsLoading && !requestsError && requests.length === 0 && (
+              <p className="dashboard-requests-state">
+                There are no pending service requests.
+              </p>
+            )}
 
-                <p>
-                  Ticket #RM-8492 • Broadcasted 4 mins ago
-                </p>
-              </div>
-
-              <span className="priority-label">
-                ● HIGH PRIORITY
-              </span>
-
-              <strong className="dispatch-fee">
-                Rs. 4,200
-                <small> est. fee</small>
-              </strong>
-
-            </div>
-
-            {/* Motorist and failure details */}
-            <div className="customer-details">
-
-              <div className="motorist-details">
-
-                <small>MOTORIST DETAILS</small>
-
-                <div className="motorist-info">
-                  <span className="motorist-avatar">
-                    <UserRound size={20} />
-                  </span>
-
-                  <div>
-                    <h4>Niroshan Perera</h4>
-                    <strong>077 892 4110</strong>
-                  </div>
+            {requests.slice(0, 3).map((request) => (
+              <Link
+                key={request._id}
+                to="/mechanic/requests"
+                state={{ selectedRequestId: request._id }}
+                className="dashboard-request-card"
+              >
+                <div className="dashboard-request-card-heading">
+                  <strong>Request #{request._id.slice(-6).toUpperCase()}</strong>
+                  <time dateTime={request.createdAt}>
+                    {new Date(request.createdAt).toLocaleString()}
+                  </time>
                 </div>
-
                 <p>
-                  Vehicle: Honda Grace (Hybrid)
-                  &nbsp; WP CAA 4821
+                  {request.customer?.fullName || "Customer"} ·{" "}
+                  {request.vehicle?.model || request.vehicle?.vehicleType || "Vehicle"}
+                  {request.vehicle?.registrationNumber
+                    ? ` (${request.vehicle.registrationNumber})`
+                    : ""}
                 </p>
-
-              </div>
-
-              <div className="failure-details">
-
-                <small>FAILURE DIAGNOSTICS</small>
-
-                <h4>
-                  <ShieldAlert size={13} />
-                  Alternator Failure / Battery Dead
-                </h4>
-
-                <p>
+                <p>{request.problem}</p>
+                <span>
                   <MapPin size={13} />
-                  Gate Bazaar Junction, Near Clock Tower
-                </p>
-
-                <p>
-                  Distance: 1.8 km
-                  &nbsp; · &nbsp;
-                  Est. Travel Time: <strong>6 mins</strong>
-                </p>
-
-              </div>
-
-            </div>
-
-            {/* Empty map area - intentionally left blank */}
-            <div className="dispatch-map-placeholder">
-            </div>
-
-            {/* Action buttons */}
-            <div className="dispatch-actions">
-
-              <button
-                type="button"
-                className="navigate-button"
-                onClick={() =>
-                  window.open(
-                    "https://www.google.com/maps/search/?api=1&query=Gate+Bazaar+Batticaloa",
-                    "_blank"
-                  )
-                }
-              >
-                <Navigation size={14} />
-                Navigate with Maps (6m)
-              </button>
-
-              <a
-                href="tel:0778924110"
-                className="call-button"
-              >
-                <Phone size={14} />
-                Call Customer
-              </a>
-
-              <button
-                type="button"
-                className="arrived-button"
-                onClick={() => setArrived(true)}
-              >
-                <Flag size={13} />
-                {arrived ? "Arrived" : "Update to Arrived"}
-              </button>
-
-            </div>
-
-          </div>
-
-          {/* Priority support */}
-          <aside className="priority-support-card">
-
-            <div className="support-heading">
-              <span className="support-indicator" />
-              PRIORITY SUPPORT LINE
-            </div>
-
-            <h3>Eastern Province Support</h3>
-
-            <p className="support-description">
-              Emergency escalation for dangerous road
-              conditions, accident obstructions, or towing
-              escorts.
-            </p>
-
-            <div className="support-contact">
-
-              <div>
-                <span>
-                  <ShieldAlert size={13} />
-                  Police Patrol / Emergency
+                  {request.location?.address || "Location not provided"}
                 </span>
-
-                <strong>119</strong>
-              </div>
-
-              <div>
-                <span>
-                  <Phone size={13} />
-                  Highway Assist
-                  <br />
-                  Batticaloa
-                </span>
-
-                <strong>065 222 2222</strong>
-              </div>
-
-            </div>
-
-          </aside>
-
+              </Link>
+            ))}
+          </section>
         </section>
 
       </main>

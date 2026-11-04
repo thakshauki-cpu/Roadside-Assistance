@@ -7,15 +7,12 @@ import {
 } from "lucide-react";
 
 function MechanicTopbar({
+  mechanicName = "Mechanic",
   notificationCount = 3,
   rating = "4.9",
   jobs = 142,
 }) {
-  const user = JSON.parse(
-    localStorage.getItem("user") || "{}"
-  );
-
-  const name = user.fullName || "Mechanic";
+  const name = mechanicName || "Mechanic";
 
   return (
     <header className="mech-topbar">

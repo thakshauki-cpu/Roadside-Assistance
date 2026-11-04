@@ -169,6 +169,15 @@
   font-size: 9px;
 }
 
+.mech-duty-row button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.mech-availability-error {
+  color: #c62828 !important;
+}
+
 .mech-logout {
   width: 100%;
   display: flex;
@@ -500,10 +509,100 @@
 
 .mechanic-work-area {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(185px, 0.9fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 15px;
   margin: 0 15px;
   align-items: start;
+}
+
+.dashboard-requests {
+  min-width: 0;
+  padding: 16px;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 2px 5px rgb(31 42 68 / 9%);
+}
+
+.dashboard-requests-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.dashboard-requests-heading h3 {
+  margin: 0;
+  color: #182238;
+  font-size: 14px;
+}
+
+.dashboard-requests-heading p {
+  margin: 5px 0 0;
+  color: #747c8d;
+  font-size: 10px;
+}
+
+.dashboard-requests-heading a {
+  color: #2459fa;
+  font-size: 10px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.dashboard-requests-state,
+.dashboard-requests-error {
+  margin: 0;
+  padding: 15px 10px;
+  color: #747c8d;
+  font-size: 11px;
+}
+
+.dashboard-requests-error {
+  color: #c62828;
+}
+
+.dashboard-request-card {
+  display: block;
+  margin-top: 9px;
+  padding: 12px;
+  border: 1px solid #e8ebf2;
+  border-radius: 8px;
+  color: #293957;
+  text-decoration: none;
+}
+
+.dashboard-request-card:hover,
+.dashboard-request-card:focus-visible {
+  border-color: #9eb4ff;
+  background: #f8faff;
+}
+
+.dashboard-request-card-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 11px;
+}
+
+.dashboard-request-card-heading time {
+  color: #747c8d;
+  font-size: 9px;
+}
+
+.dashboard-request-card p {
+  margin: 7px 0 0;
+  font-size: 10px;
+}
+
+.dashboard-request-card > span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 8px;
+  color: #667187;
+  font-size: 10px;
 }
 
 .urgent-dispatch-card {
@@ -945,4 +1044,157 @@
   .dispatch-actions {
     grid-template-columns: 1fr;
   }
+}
+
+/* Mechanic Availability */
+
+.mechanic-availability-card {
+  padding: 13px;
+  border-radius: 9px;
+  background: #ffffff;
+  box-shadow: 0 2px 5px rgba(31, 42, 68, 0.09);
+}
+
+.availability-heading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #079b68;
+  font-size: 8px;
+  font-weight: 700;
+}
+
+.availability-indicator {
+  width: 9px;
+  height: 9px;
+  border: 2px solid #079b68;
+  border-radius: 50%;
+}
+
+.mechanic-availability-card h3 {
+  margin: 10px 0 7px;
+  color: #182238;
+  font-size: 13px;
+}
+
+.availability-description {
+  margin: 0 0 12px;
+  color: #747c8d;
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.availability-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px;
+  border: 1px solid #d9eee4;
+  border-radius: 7px;
+  background: #f0fbf5;
+}
+
+.availability-status > div {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.availability-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #079b68;
+}
+
+.availability-status strong {
+  color: #16734e;
+  font-size: 9px;
+}
+
+.availability-online-label {
+  color: #079b68;
+  font-size: 8px;
+  font-weight: 700;
+}
+
+.availability-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.availability-info > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 5px;
+  font-size: 9px;
+}
+
+.availability-info span {
+  color: #747c8d;
+}
+
+.availability-info strong {
+  color: #293957;
+}
+/* Availability Toggle */
+
+.availability-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 10px;
+  margin-top: 12px;
+  border: 1px solid #e8eaf0;
+  border-radius: 8px;
+  background: #f8f9fc;
+}
+
+.status-online {
+  color: #079b68;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.status-offline {
+  color: #e54848;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.toggle-switch {
+  width: 38px;
+  height: 21px;
+  padding: 3px;
+  border: none;
+  border-radius: 20px;
+  background: #c7cbd4;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.toggle-switch span {
+  display: block;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: white;
+  transition: 0.3s;
+}
+
+.toggle-switch.active {
+  background: #079b68;
+}
+
+.toggle-switch.active span {
+  transform: translateX(17px);
+}
+
+.availability-note {
+  margin-top: 10px;
+  color: #747c8d;
+  font-size: 9px;
+  line-height: 1.5;
 }

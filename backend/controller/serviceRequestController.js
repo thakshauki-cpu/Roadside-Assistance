@@ -11,6 +11,24 @@
 import Vehicle from "../models/Vehicle.js";
 import ServiceRequest from "../models/ServiceRequest.js";
 
+export const getPendingServiceRequests = async (_req, res) => {
+  try {
+    const requests = await ServiceRequest.find({ status: "pending" })
+      .select("customer vehicle problem description location status createdAt")
+      .populate("customer", "fullName mobile")
+      .populate("vehicle", "vehicleType model registrationNumber")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    return res.status(200).json({ requests });
+  } catch (error) {
+    console.error("Get pending service requests error:", error);
+    return res.status(500).json({
+      message: "Failed to fetch pending service requests.",
+    });
+  }
+};
+
 // Create Service Request
 export const createServiceRequest = async (req, res) => {
   let createdVehicle;

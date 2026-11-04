@@ -1,12 +1,8 @@
-import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Wrench,
-  Wallet,
   CircleUserRound,
-  Bell,
-  Settings,
   LogOut,
   MapPin,
 } from "lucide-react";
@@ -25,35 +21,39 @@ const menuItems = [
     path: "/mechanic/requests",
     showCount: true,
   },
-  {
-    label: "Earnings",
-    icon: Wallet,
-    path: "/mechanic/earnings",
-  },
+  // {
+  //   label: "Earnings",
+  //   icon: Wallet,
+  //   path: "/mechanic/earnings",
+  // },
   {
     label: "Profile",
     icon: CircleUserRound,
     path: "/mechanic/profile",
   },
-  {
-    label: "Notifications",
-    icon: Bell,
-    path: "/mechanic/notifications",
-    showDot: true,
-  },
-  {
-    label: "Settings",
-    icon: Settings,
-    path: "/mechanic/settings",
-  },
+  // {
+  //   label: "Notifications",
+  //   icon: Bell,
+  //   path: "/mechanic/notifications",
+  //   showDot: true,
+  // },
+  // {
+  //   label: "Settings",
+  //   icon: Settings,
+  //   path: "/mechanic/settings",
+  // },
 ];
 
 function MechanicSidebar({
   activeItem = "Dashboard",
-  pendingCount = 3,
+  pendingCount = 0,
+  isAvailable,
+  availabilityLoading = false,
+  availabilityUpdating = false,
+  availabilityError = "",
+  onToggleAvailability,
 }) {
   const navigate = useNavigate();
-  const [isOnline, setIsOnline] = useState(true);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -119,18 +119,38 @@ function MechanicSidebar({
 
             <button
               type="button"
-              className={isOnline ? "online" : "offline"}
-              onClick={() => setIsOnline(!isOnline)}
+              className={isAvailable ? "online" : "offline"}
+              disabled={
+                availabilityLoading ||
+                availabilityUpdating ||
+                !onToggleAvailability
+              }
+              onClick={onToggleAvailability}
+              aria-busy={availabilityUpdating}
+              aria-label={`Set availability to ${isAvailable ? "unavailable" : "available"}`}
             >
-              ● {isOnline ? "ONLINE" : "OFFLINE"}
+              {availabilityLoading
+                ? "LOADING"
+                : isAvailable === undefined
+                  ? "STATUS UNKNOWN"
+                  : `● ${isAvailable ? "AVAILABLE" : "UNAVAILABLE"}`}
             </button>
           </div>
 
           <span>
-            {isOnline
-              ? "Available for Emergency Jobs"
-              : "Not receiving new jobs"}
+            {availabilityUpdating
+              ? "Saving availability..."
+              : isAvailable === undefined
+                ? "Availability could not be loaded"
+                : isAvailable
+                ? "Available for emergency jobs"
+                : "Not receiving new jobs"}
           </span>
+          {availabilityError && (
+            <span className="mech-availability-error" role="alert">
+              {availabilityError}
+            </span>
+          )}
 
         </div>
 

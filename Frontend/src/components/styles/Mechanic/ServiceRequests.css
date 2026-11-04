@@ -1,0 +1,946 @@
+
+* {
+  box-sizing: border-box;
+}
+
+.service-requests-page {
+  display: flex;
+  min-height: 100vh;
+  background: #f8f7ff;
+  color: #192238;
+  font-family: Arial, sans-serif;
+}
+
+/* ==============================
+   EXISTING SIDEBAR STYLING
+============================== */
+
+.mech-sidebar {
+  width: 225px;
+  min-width: 225px;
+  min-height: 100vh;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid #eeeeF5;
+}
+
+.mech-logo {
+  width: 120px;
+  height: auto;
+  object-fit: contain;
+  margin: 18px 16px 28px;
+}
+
+.mech-sector {
+  margin: 0 12px 14px;
+  padding: 6px;
+  border-radius: 8px;
+  background: #eef0ff;
+  color: #414b68;
+  font-size: 10px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.mech-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0 12px;
+}
+
+.mech-menu-link {
+  min-height: 36px;
+  padding: 9px 10px;
+  border-radius: 11px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #444b60;
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.mech-menu-link.active {
+  background: #e4e9ff;
+  color: #1453ff;
+}
+
+.mech-menu-count {
+  margin-left: auto;
+  background: #ffdbb5;
+  color: #74420a;
+  border-radius: 50%;
+  width: 17px;
+  height: 17px;
+  display: grid;
+  place-items: center;
+  font-size: 10px;
+}
+
+.mech-menu-dot {
+  width: 7px;
+  height: 7px;
+  background: #d71920;
+  border-radius: 50%;
+  margin-left: auto;
+}
+
+.mech-sidebar-bottom {
+  margin-top: auto;
+  padding: 10px;
+  background: #f0f2ff;
+}
+
+.mech-side-box {
+  background: white;
+  border-radius: 10px;
+  padding: 10px;
+  margin-bottom: 8px;
+  font-size: 10px;
+}
+
+.mech-duty-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.mech-duty-row small {
+  font-weight: bold;
+}
+
+.mech-duty-button {
+  border: none;
+  background: transparent;
+  color: #dc3545;
+  font-size: 10px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.mech-duty-button.online {
+  color: #00845a;
+}
+
+.mech-side-box > span {
+  color: #697084;
+}
+
+.mech-vehicle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 6px;
+  gap: 5px;
+}
+
+.mech-plate {
+  background: #e8ebff;
+  padding: 4px;
+  border-radius: 4px;
+  font-weight: bold;
+  font-size: 12px;
+}
+
+.mech-logout {
+  border: none;
+  background: transparent;
+  color: #e02032;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  padding: 12px 5px;
+  cursor: pointer;
+  font-size: 11px;
+}
+
+/* ==============================
+   EXISTING TOPBAR STYLING
+============================== */
+
+.service-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.mech-topbar {
+  height: 58px;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 20px;
+  border-bottom: 1px solid #eeeef5;
+}
+
+.mech-search {
+  height: 35px;
+  width: min(32%, 300px);
+  background: #f1f2ff;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  color: #4d5368;
+}
+
+.mech-search input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font-size: 10px;
+}
+
+.mech-pill {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: 8px;
+  padding: 7px 10px;
+  background: #eef0ff;
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.mech-pill.blue {
+  color: #1453ff;
+  background: #e4e9ff;
+}
+
+.mech-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.mech-bell {
+  position: relative;
+  border: 0;
+  background: white;
+  cursor: pointer;
+  color: #20283d;
+}
+
+.mech-bell-count {
+  position: absolute;
+  top: -7px;
+  right: -6px;
+  background: #c91f27;
+  color: white;
+  border-radius: 50%;
+  font-size: 9px;
+  width: 15px;
+  height: 15px;
+  display: grid;
+  place-items: center;
+}
+
+.mech-user {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border-left: 1px solid #eee;
+  padding-left: 12px;
+}
+
+.mech-user-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+  font-size: 10px;
+}
+
+.mech-user-text small {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  color: #00885e;
+}
+
+.mech-avatar.big {
+  width: 31px;
+  height: 31px;
+  border-radius: 50%;
+  background: #e8edff;
+  color: #2458f5;
+  display: grid;
+  place-items: center;
+  font-weight: bold;
+}
+
+/* ==============================
+   PAGE HEADING
+============================== */
+
+.service-content {
+  padding: 15px 20px 30px;
+}
+
+.service-title {
+  margin-bottom: 27px;
+}
+
+.service-title h1 {
+  margin: 0 0 5px;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -1px;
+}
+
+.service-title p {
+  margin: 0;
+  max-width: 600px;
+  color: #53596c;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* ==============================
+   MAIN GRID
+============================== */
+
+.service-grid {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.9fr) minmax(400px, 1.1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.request-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ==============================
+   REQUEST CARDS
+============================== */
+
+.service-request-card {
+  background: white;
+  border-radius: 12px;
+  padding: 15px;
+  box-shadow: 0 2px 5px rgba(20, 30, 60, 0.05);
+}
+
+.pending-request {
+  border-left: 5px solid #2457ff;
+}
+
+.request-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.request-id {
+  color: #0647f5;
+  font-size: 14px;
+  letter-spacing: 1px;
+}
+
+.pending-label {
+  display: inline-block;
+  margin-left: 5px;
+  padding: 4px 7px;
+  background: #ffe1bd;
+  color: #583400;
+  border-radius: 20px;
+  font-size: 9px;
+  font-weight: bold;
+}
+
+.request-header p {
+  margin: 5px 0 0;
+  color: #4d5365;
+  font-size: 10px;
+}
+
+.request-amount {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  white-space: nowrap;
+}
+
+.request-amount strong {
+  font-size: 17px;
+}
+
+.request-amount small {
+  color: #008653;
+  font-size: 10px;
+}
+
+.service-request-card h3 {
+  margin: 14px 0 5px;
+  font-size: 16px;
+}
+
+.vehicle-number {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 10px;
+  color: #51576b;
+}
+
+.vehicle-number strong {
+  background: #e8ebff;
+  color: #1c263d;
+  padding: 4px 6px;
+  font-size: 13px;
+  letter-spacing: 1px;
+}
+
+.problem-box {
+  background: #f5f6ff;
+  padding: 9px;
+  border-radius: 9px;
+  margin-top: 12px;
+}
+
+.problem-box p {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 6px;
+  font-size: 10px;
+}
+
+.problem-box p:last-child {
+  margin-bottom: 0;
+}
+
+.problem-box p:first-child svg {
+  color: #e32636;
+}
+
+.problem-box p:last-child svg {
+  color: #2457ff;
+}
+
+.request-buttons {
+  display: flex;
+  gap: 7px;
+  margin-top: 17px;
+}
+
+.request-buttons button {
+  flex: 1;
+  height: 36px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 11px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+}
+
+.request-accept {
+  background: #007b51;
+  color: white;
+}
+
+.request-decline {
+  background: #e9ebff;
+  color: #df1010;
+}
+
+/* ==============================
+   RESOLVED REQUEST
+============================== */
+
+.resolved-request {
+  border: 1px solid #f0f0f5;
+}
+
+.resolved-id {
+  color: #53596c;
+  font-size: 14px;
+  letter-spacing: 1px;
+}
+
+.resolved-label {
+  display: inline-block;
+  margin-left: 5px;
+  background: #b9f6d9;
+  color: #007d4e;
+  padding: 4px 7px;
+  border-radius: 20px;
+  font-size: 9px;
+  font-weight: bold;
+}
+
+.resolved-amount strong {
+  color: #008653;
+}
+
+.resolved-vehicle {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+  font-size: 11px;
+}
+
+.resolved-vehicle span {
+  margin-left: auto;
+  color: #51576b;
+  font-size: 10px;
+}
+
+.resolved-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 13px;
+  font-size: 10px;
+  color: #51576b;
+}
+
+/* ==============================
+   INCOMING DISPATCH
+============================== */
+
+.incoming-dispatch {
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 3px 7px rgba(20, 30, 60, 0.10);
+}
+
+.dispatch-header {
+  background: #f0f1ff;
+  padding: 24px 21px 15px;
+}
+
+.incoming-label {
+  display: inline-block;
+  background: #ffdfbd;
+  color: #503000;
+  padding: 5px 9px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: bold;
+}
+
+.dispatch-header h2 {
+  font-size: 21px;
+  line-height: 1.3;
+  margin: 22px 0 4px;
+}
+
+.dispatch-header p {
+  font-size: 10px;
+  color: #4f5669;
+  margin: 0;
+}
+
+/* CUSTOMER DETAILS */
+
+.dispatch-content {
+  padding: 20px;
+}
+
+.customer-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #f0f1ff;
+  padding: 12px;
+  border-radius: 12px;
+}
+
+.customer-avatar {
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  background: #dce2ff;
+  color: #0753ff;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: bold;
+}
+
+.customer-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
+
+.customer-info strong {
+  font-size: 12px;
+}
+
+.customer-info span {
+  font-size: 10px;
+  color: #51576b;
+}
+
+.customer-info small {
+  font-size: 9px;
+  color: #008653;
+  font-weight: bold;
+}
+
+.customer-call,
+.customer-sms {
+  text-decoration: none;
+  border: none;
+  border-radius: 8px;
+  padding: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.customer-call {
+  background: #007b51;
+  color: white;
+}
+
+.customer-sms {
+  background: #e2e7ff;
+  color: #0647f5;
+}
+
+/* VEHICLE AND DISTANCE */
+
+.dispatch-information {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.information-box {
+  background: #f0f1ff;
+  padding: 12px;
+  border-radius: 12px;
+  min-height: 80px;
+}
+
+.information-box > span {
+  display: block;
+  font-size: 9px;
+  color: #454b5f;
+  margin-bottom: 7px;
+  font-weight: bold;
+}
+
+.information-box > strong {
+  display: block;
+  font-size: 14px;
+  letter-spacing: 1px;
+}
+
+.information-box > small {
+  display: block;
+  font-size: 9px;
+  color: #51576b;
+  margin-top: 7px;
+}
+
+.information-box .distance-value {
+  color: #0753ff;
+  font-size: 20px;
+  letter-spacing: 0;
+}
+
+.distance-value small {
+  color: #51576b;
+  font-size: 9px;
+  font-weight: normal;
+}
+
+.information-box p {
+  color: #008653;
+  font-size: 10px;
+  margin: 4px 0 0;
+}
+
+/* ACCEPT AND DECLINE */
+
+.dispatch-buttons {
+  display: flex;
+  gap: 10px;
+  margin-top: 17px;
+}
+
+.dispatch-buttons button {
+  height: 42px;
+  border: none;
+  border-radius: 11px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+
+.dispatch-accept {
+  flex: 1;
+  background: #2457ff;
+  color: white;
+  box-shadow: 0 3px 5px rgba(36, 87, 255, 0.2);
+}
+
+.dispatch-decline {
+  background: #ffdcda;
+  color: #d71920;
+  padding: 0 17px;
+}
+
+.request-message {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  margin-top: 15px;
+  border-radius: 9px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.request-message.accepted {
+  color: #007b51;
+  background: #d9f8e9;
+}
+
+.request-message.declined {
+  color: #d71920;
+  background: #ffe5e3;
+}
+
+.service-requests-state,
+.service-requests-error {
+  padding: 18px;
+  border: 1px solid #e4e8f0;
+  border-radius: 10px;
+  background: #fff;
+  color: #68738a;
+  font-size: 13px;
+}
+
+.service-requests-error {
+  color: #b42318;
+}
+
+.service-request-card {
+  width: 100%;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.service-request-card.selected-request {
+  border-color: #2459fa;
+  box-shadow: 0 0 0 2px rgb(36 89 250 / 12%);
+}
+
+.request-customer {
+  display: block;
+  margin-top: 10px;
+  color: #59647b;
+  font-size: 11px;
+}
+
+.selected-request-location {
+  display: grid;
+  gap: 7px;
+  padding: 13px;
+  border-radius: 9px;
+  background: #f5f6ff;
+  color: #515d73;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.selected-request-location strong {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #293957;
+}
+
+.selected-request-location small,
+.selected-request-description {
+  color: #737e92;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.selected-request-description {
+  margin: 0;
+  padding: 12px;
+  border: 1px solid #e9edf4;
+  border-radius: 9px;
+}
+
+/* ==============================
+   RESPONSIVE DESIGN
+============================== */
+
+@media (max-width: 1100px) {
+  .service-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .mech-pill.blue {
+    display: none;
+  }
+}
+
+@media (max-width: 750px) {
+  .mech-sidebar {
+    width: 65px;
+    min-width: 65px;
+  }
+
+  .mech-logo {
+    width: 38px;
+    margin: 15px auto 25px;
+  }
+
+  .mech-sector {
+    display: none;
+  }
+
+  .mech-menu {
+    padding: 0 8px;
+  }
+
+  .mech-menu-link {
+    justify-content: center;
+    font-size: 0;
+    padding: 12px 4px;
+  }
+
+  .mech-menu-link svg {
+    flex-shrink: 0;
+  }
+
+  .mech-menu-count,
+  .mech-menu-dot {
+    display: none;
+  }
+
+  .mech-sidebar-bottom {
+    display: block;
+    padding: 4px;
+    background: #fff;
+  }
+
+  .mech-duty-box {
+    padding: 2px;
+    border: 0;
+  }
+
+  .mech-duty-row {
+    justify-content: center;
+  }
+
+  .mech-duty-row small,
+  .mech-duty-box > span,
+  .mech-logout {
+    display: none;
+  }
+
+  .mech-duty-row button {
+    width: 30px;
+    height: 28px;
+    padding: 0;
+    overflow: hidden;
+    font-size: 0;
+  }
+
+  .mech-duty-row button::before {
+    content: "●";
+    font-size: 17px;
+  }
+
+  .mech-topbar {
+    padding: 0 9px;
+  }
+
+  .mech-search {
+    width: 45%;
+  }
+
+  .mech-pill {
+    display: none;
+  }
+
+  .mech-user-text {
+    display: none;
+  }
+
+  .service-content {
+    padding: 15px 10px;
+  }
+
+  .service-title h1 {
+    font-size: 22px;
+  }
+
+  .customer-card {
+    flex-wrap: wrap;
+  }
+
+  .customer-info {
+    min-width: 150px;
+  }
+}
+
+@media (max-width: 450px) {
+  .dispatch-information {
+    grid-template-columns: 1fr;
+  }
+
+  .resolved-footer {
+    flex-direction: column;
+  }
+
+  .dispatch-buttons {
+    flex-direction: column;
+  }
+
+  .dispatch-decline {
+    min-height: 40px;
+  }
+
+  .request-header {
+    flex-wrap: wrap;
+  }
+}
