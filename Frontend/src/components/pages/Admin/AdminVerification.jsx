@@ -437,7 +437,15 @@ function AdminVerification() {
 
                       <span>
                         <Phone size={14} />
-                        {item.phone || item.user?.mobile || "No phone"}
+                        {item.phone || item.user?.mobile ? (
+                          <a
+                            href={`tel:${(item.phone || item.user.mobile).replace(/[^\d+]/g, "")}`}
+                          >
+                            {item.phone || item.user.mobile}
+                          </a>
+                        ) : (
+                          "No phone"
+                        )}
                       </span>
 
                     </div>

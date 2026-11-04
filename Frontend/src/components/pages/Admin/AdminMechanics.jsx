@@ -525,7 +525,14 @@ function AdminMechanics() {
 
                       <small>
                         <Phone size={11} />
-                        {" "}{phone}
+                        {" "}
+                        {phone === "Not provided" ? (
+                          phone
+                        ) : (
+                          <a href={`tel:${phone.replace(/[^\d+]/g, "")}`}>
+                            {phone}
+                          </a>
+                        )}
                       </small>
                     </td>
 

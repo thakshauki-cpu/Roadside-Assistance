@@ -340,7 +340,9 @@ function MechanicFound() {
               <Phone size={16} />
               <div>
                 <span>Need urgent SOS help or police assistance?</span>
-                <strong>Call Batticaloa Hotline: 065-222-3333</strong>
+                <a href="tel:0652223333">
+                  Call Batticaloa Hotline: 065-222-3333
+                </a>
               </div>
             </div>
 

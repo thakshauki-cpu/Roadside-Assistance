@@ -223,8 +223,9 @@ if (data.user.role === "mechanic") {
           <div className="emergency-content">
             <h2>24/7 Batticaloa Emergency Line</h2>
             <p>
-              Critical breakdown? Call direct: 1990 or
-              065-222-2400
+              Critical breakdown? Call direct:{" "}
+              <a href="tel:1990">1990</a> or{" "}
+              <a href="tel:0652222400">065-222-2400</a>
             </p>
 
             <div className="emergency-location">

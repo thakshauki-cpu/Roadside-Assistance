@@ -236,10 +236,7 @@ function ProfilePage() {
           {/* Page Heading */}
           <div className="profile-heading">
             <div>
-              <div className="profile-breadcrumb">
-                Account <span>›</span>
-                <strong>Profile Settings</strong>
-              </div>
+              
 
               <h1>Profile &amp; Account Settings</h1>
 
@@ -281,13 +278,7 @@ function ProfilePage() {
                     {initials}
                   </div>
 
-                  <button
-                    className="profile-camera-btn"
-                    type="button"
-                    aria-label="Change profile picture"
-                  >
-                    <Camera size={13} />
-                  </button>
+                
                 </div>
 
                 <h2>{user.fullName || "Customer Name"}</h2>

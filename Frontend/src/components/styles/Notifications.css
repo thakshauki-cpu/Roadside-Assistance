@@ -29,7 +29,7 @@
 
 .notifications-heading-title h1 {
   margin: 0;
-  font-size: 23px;
+  font-size: 24px;
   font-weight: 750;
   letter-spacing: -0.6px;
   color: #172238;
@@ -43,7 +43,7 @@
   border-radius: 20px;
   background: #e7edff;
   color: #164cf1;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
 }
 
@@ -58,7 +58,7 @@
   margin: 5px 0 9px;
   color: #69728a;
   font-family: Georgia, serif;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.5;
 }
 
@@ -79,7 +79,7 @@
   border-radius: 7px;
   background: #fff;
   color: #344058;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   cursor: pointer;
 }
@@ -134,7 +134,7 @@
   border-radius: 5px;
   background: transparent;
   color: #424c64;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   cursor: pointer;
 }
@@ -155,7 +155,7 @@
   border-radius: 20px;
   background: #e6e9f4;
   color: #6c758b;
-  font-size: 9px;
+  font-size: 10px;
 }
 
 .notification-tabs button.active span {
@@ -188,7 +188,7 @@
   outline: none;
   background: transparent;
   color: #172238;
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .notification-search input::placeholder {
@@ -289,7 +289,7 @@
 .notification-title-row h2 {
   margin: 0;
   color: #172238;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 750;
   line-height: 1.45;
 }
@@ -305,7 +305,7 @@
   margin: 4px 0 8px;
   color: #4f5b72;
   font-family: Georgia, serif;
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1.5;
 }
 
@@ -324,7 +324,7 @@
   padding: 5px 8px;
   border: 1px solid transparent;
   border-radius: 5px;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
   cursor: pointer;
   transition: background 0.2s;
@@ -370,7 +370,7 @@
 
 .notification-time {
   color: #2055f5;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
   white-space: nowrap;
 }
@@ -384,7 +384,7 @@
   border-radius: 20px;
   background: #fff0d7;
   color: #a95a00;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
   white-space: nowrap;
 }
@@ -407,7 +407,7 @@
 .notification-location {
   color: #7b8498;
   font-family: Georgia, serif;
-  font-size: 9px;
+  font-size: 10px;
   line-height: 1.4;
 }
 
@@ -421,7 +421,7 @@
   border: none;
   background: transparent;
   color: #6d758b;
-  font-size: 9px;
+  font-size: 10px;
   white-space: nowrap;
 }
 
@@ -453,11 +453,11 @@
 
 .notification-empty h3 {
   color: #172238;
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .notification-empty p {
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .notification-empty button {
@@ -466,7 +466,7 @@
   border-radius: 6px;
   background: #2055f5;
   color: #fff;
-  font-size: 10px;
+  font-size: 11px;
   cursor: pointer;
 }
 
@@ -485,7 +485,7 @@
 .older-notifications > span {
   color: #737d93;
   font-family: Georgia, serif;
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .older-notifications strong {
@@ -500,7 +500,7 @@
   border: none;
   background: transparent;
   color: #0645df;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   cursor: pointer;
 }
@@ -550,7 +550,7 @@
 
 .urgent-help-content h2 {
   margin: 0 0 5px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 750;
 }
 
@@ -559,7 +559,7 @@
   margin: 0 0 9px;
   color: #fff2f2;
   font-family: Georgia, serif;
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.5;
 }
 
@@ -571,7 +571,7 @@
   border-radius: 6px;
   background: #fff;
   color: #b90e22;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 750;
   text-decoration: none;
 }
@@ -624,13 +624,13 @@
 .preferences-header h2 {
   margin: 0 0 5px;
   color: #172238;
-  font-size: 17px;
+  font-size: 18px;
 }
 
 .preferences-header p {
   margin: 0;
   color: #737d93;
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .preferences-header > button {
@@ -664,12 +664,12 @@
 
 .preference-option strong {
   color: #26324a;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .preference-option small {
   color: #788195;
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .preference-option input {
@@ -687,7 +687,7 @@
   border-radius: 7px;
   background: #2055f5;
   color: #fff;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   cursor: pointer;
 }
@@ -742,7 +742,7 @@
   }
 
   .notifications-heading-title h1 {
-    font-size: 21px;
+    font-size: 22px;
     color: #172238;
   }
 
@@ -780,11 +780,11 @@
   }
 
   .notification-description {
-    font-size: 11px;
+    font-size: 12px;
   }
 
   .notification-title-row h2 {
-    font-size: 12px;
+    font-size: 13px;
   }
 
   .mark-single-read,

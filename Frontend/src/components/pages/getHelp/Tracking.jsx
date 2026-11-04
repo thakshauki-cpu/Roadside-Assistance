@@ -392,9 +392,14 @@ function Tracking() {
 
                 <div className="track-contact">
                   {/* tel: opens the phone dialer on a mobile */}
-                  <a href={"tel:" + mechanic.phone} className="track-call">
-                    <Phone size={15} /> Call {mechanic.name}
-                  </a>
+                  {mechanic.phone && (
+                    <a
+                      href={"tel:" + mechanic.phone.replace(/[^\d+]/g, "")}
+                      className="track-call"
+                    >
+                      <Phone size={15} /> Call {mechanic.name}
+                    </a>
+                  )}
                   <button type="button" className="track-message" onClick={() => showNotice("Chat with the mechanic will be added later.")}>
                     <MessageSquare size={16} /> Message
                   </button>

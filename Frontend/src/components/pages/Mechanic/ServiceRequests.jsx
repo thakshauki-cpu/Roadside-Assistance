@@ -210,7 +210,7 @@ function ServiceRequests() {
                       </div>
                       {customer?.mobile && (
                         <a
-                          href={`tel:${customer.mobile}`}
+                          href={`tel:${customer.mobile.replace(/[^\d+]/g, "")}`}
                           className="customer-call"
                         >
                           <Phone size={14} />

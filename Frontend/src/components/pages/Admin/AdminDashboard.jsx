@@ -436,7 +436,16 @@ function AdminDashboard() {
                   </small>
 
                   <small>
-                    Phone: {item.phone || item.user?.mobile || "Not provided"}
+                    Phone:{" "}
+                    {item.phone || item.user?.mobile ? (
+                      <a
+                        href={`tel:${(item.phone || item.user.mobile).replace(/[^\d+]/g, "")}`}
+                      >
+                        {item.phone || item.user.mobile}
+                      </a>
+                    ) : (
+                      "Not provided"
+                    )}
                     {" • "}
                     Experience: {item.experience ?? 0} years
                   </small>
