@@ -13,6 +13,8 @@ import MechanicTopbar from "../../Mechanic/Topbar";
 import {
   getMechanicProfile,
   getPendingServiceRequests,
+  acceptServiceRequest,
+  rejectServiceRequest,
   updateMechanicAvailability,
 } from "../../../api/mechanic";
 
@@ -26,6 +28,9 @@ function MechanicDashboard() {
   const [requests, setRequests] = useState([]);
   const [requestsLoading, setRequestsLoading] = useState(true);
   const [requestsError, setRequestsError] = useState("");
+  const [processingRequestId, setProcessingRequestId] = useState(null);
+  const [processingAction, setProcessingAction] = useState(null);
+  const [requestActionFeedback, setRequestActionFeedback] = useState(null);
 
   useEffect(() => {
     let active = true;
@@ -92,6 +97,39 @@ function MechanicDashboard() {
     }
   }, [availabilityUpdating, profile]);
 
+  const handleRequestAction = async (requestId, action) => {
+    if (processingRequestId) {
+      return;
+    }
+
+    setProcessingRequestId(requestId);
+    setProcessingAction(action);
+    setRequestActionFeedback(null);
+
+    try {
+      const result =
+        action === "accept"
+          ? await acceptServiceRequest(requestId)
+          : await rejectServiceRequest(requestId);
+
+      setRequests((currentRequests) =>
+        currentRequests.filter((request) => request._id !== requestId)
+      );
+      setRequestActionFeedback({
+        type: "success",
+        message: result.message,
+      });
+    } catch (error) {
+      setRequestActionFeedback({
+        type: "error",
+        message: error.message || `Unable to ${action} this request.`,
+      });
+    } finally {
+      setProcessingRequestId(null);
+      setProcessingAction(null);
+    }
+  };
+
   const mechanicName = profile?.user?.fullName || "Mechanic";
 
   return (
@@ -114,22 +152,22 @@ function MechanicDashboard() {
       <main className="mechanic-main">
 
         {/* Reusable Topbar */}
-        <MechanicTopbar mechanicName={mechanicName} />
+        <MechanicTopbar
+          mechanicName={mechanicName}
+          showNotifications={false}
+        />
 
         {/* Welcome section */}
         <section className="mechanic-welcome">
 
           <h1>
-            HELLO
-            <br />
-            {mechanicName}!
+            HELLO {mechanicName}!
           </h1>
 
           <p>
             Ready for roadside assistance calls across Batticaloa.
-            High vehicle density detected along A4
-            <br />
-            Coastal Corridor & Gate Bazaar.
+            {" "}High vehicle density detected along A4 Coastal Corridor &amp;
+            Gate Bazaar.
           </p>
 
         </section>
@@ -258,6 +296,14 @@ function MechanicDashboard() {
                 {requestsError}
               </p>
             )}
+            {requestActionFeedback && (
+              <p
+                className={`dashboard-request-feedback ${requestActionFeedback.type}`}
+                role={requestActionFeedback.type === "error" ? "alert" : "status"}
+              >
+                {requestActionFeedback.message}
+              </p>
+            )}
             {!requestsLoading && !requestsError && requests.length === 0 && (
               <p className="dashboard-requests-state">
                 There are no pending service requests.
@@ -265,31 +311,68 @@ function MechanicDashboard() {
             )}
 
             {requests.slice(0, 3).map((request) => (
-              <Link
+              <article
                 key={request._id}
-                to="/mechanic/requests"
-                state={{ selectedRequestId: request._id }}
                 className="dashboard-request-card"
               >
-                <div className="dashboard-request-card-heading">
-                  <strong>Request #{request._id.slice(-6).toUpperCase()}</strong>
-                  <time dateTime={request.createdAt}>
-                    {new Date(request.createdAt).toLocaleString()}
-                  </time>
+                <Link
+                  to="/mechanic/requests"
+                  state={{ selectedRequestId: request._id }}
+                  className="dashboard-request-link"
+                >
+                  <div className="dashboard-request-card-heading">
+                    <strong>Request #{request._id.slice(-6).toUpperCase()}</strong>
+                    <span className="dashboard-request-status">PENDING</span>
+                    <time dateTime={request.createdAt}>
+                      {new Date(request.createdAt).toLocaleString()}
+                    </time>
+                  </div>
+                  <p>
+                    {request.customer?.fullName || "Customer"} ·{" "}
+                    {request.vehicle?.model || request.vehicle?.vehicleType || "Vehicle"}
+                    {request.vehicle?.registrationNumber
+                      ? ` (${request.vehicle.registrationNumber})`
+                      : ""}
+                  </p>
+                  <p>{request.problem}</p>
+                  <span className="dashboard-request-location">
+                    <MapPin size={13} />
+                    {request.location?.address || "Location not provided"}
+                  </span>
+                </Link>
+                <div className="dashboard-request-actions">
+                  <button
+                    type="button"
+                    className="dashboard-request-action accept"
+                    disabled={processingRequestId !== null}
+                    aria-busy={
+                      processingRequestId === request._id &&
+                      processingAction === "accept"
+                    }
+                    onClick={() => handleRequestAction(request._id, "accept")}
+                  >
+                    {processingRequestId === request._id &&
+                    processingAction === "accept"
+                      ? "Accepting..."
+                      : "Accept"}
+                  </button>
+                  <button
+                    type="button"
+                    className="dashboard-request-action reject"
+                    disabled={processingRequestId !== null}
+                    aria-busy={
+                      processingRequestId === request._id &&
+                      processingAction === "reject"
+                    }
+                    onClick={() => handleRequestAction(request._id, "reject")}
+                  >
+                    {processingRequestId === request._id &&
+                    processingAction === "reject"
+                      ? "Rejecting..."
+                      : "Reject"}
+                  </button>
                 </div>
-                <p>
-                  {request.customer?.fullName || "Customer"} ·{" "}
-                  {request.vehicle?.model || request.vehicle?.vehicleType || "Vehicle"}
-                  {request.vehicle?.registrationNumber
-                    ? ` (${request.vehicle.registrationNumber})`
-                    : ""}
-                </p>
-                <p>{request.problem}</p>
-                <span>
-                  <MapPin size={13} />
-                  {request.location?.address || "Location not provided"}
-                </span>
-              </Link>
+              </article>
             ))}
           </section>
         </section>

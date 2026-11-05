@@ -25,6 +25,11 @@ import MechanicRegisterPage from "./components/pages/Mechanic/MechanicRegisterPa
 import MechanicDashboard from "./components/pages/Mechanic/MechanicDashboard";
 import ServiceRequests from "./components/pages/Mechanic/ServiceRequests";
 import MechanicProtectedRoute from "./components/Mechanic/MechanicProtectedRoute";
+import MechanicProfile from "./components/pages/Mechanic/MechanicProfile";
+
+
+
+
 
 import AdminProtectedRoute from "./components/Admin/AdminProtectedRoute";
 import AdminLogin from "./components/pages/Admin/AdminLogin";
@@ -140,7 +145,7 @@ function App() {
 {/* Mechanic Dashboard */}
 <Route path="/mechanic/dashboard" element={<MechanicProtectedRoute><MechanicDashboard /></MechanicProtectedRoute>} />
 <Route path="/mechanic/requests" element={<MechanicProtectedRoute><ServiceRequests /></MechanicProtectedRoute>} />
-
+<Route path="/mechanic/profile" element={<MechanicProtectedRoute><MechanicProfile /></MechanicProtectedRoute>} />
 
 
 {/* Admin Routes */}

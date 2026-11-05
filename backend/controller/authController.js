@@ -155,6 +155,7 @@ export const registerUser = async (req, res) => {
           },
           isAvailable: false,
           isVerified: false,
+          verificationStatus: "pending",
         });
       } catch (profileError) {
         // Remove User if Mechanic Profile creation fails
@@ -220,14 +221,50 @@ export const login = async (req, res) => {
       });
     }
 
-   // Check whether the customer account is blocked
-if (user.role === "customer" && user.isActive === false) {
-  return res.status(403).json({
-    message: "Your account has been blocked by the administrator. Please contact support.",
-  });
-}
+    if (user.role !== role) {
+      return res.status(401).json({
+        message: "Invalid email or password.",
+      });
+    }
 
-    //  Admin approval check at this stage
+    if (user.role === "mechanic") {
+      const mechanicProfile = await MechanicProfile.findOne({
+        user: user._id,
+      }).select("isVerified verificationStatus");
+
+      if (mechanicProfile?.verificationStatus === "pending") {
+        return res.status(403).json({
+          message:
+            "Your account is waiting for admin verification. You can access your dashboard after approval.",
+        });
+      }
+
+      if (mechanicProfile?.verificationStatus === "rejected") {
+        return res.status(403).json({
+          message:
+            "Your mechanic account was rejected. Please contact support for more information.",
+        });
+      }
+
+      if (
+        mechanicProfile?.verificationStatus !== "approved" ||
+        mechanicProfile.isVerified !== true
+      ) {
+        return res.status(403).json({
+          message:
+            "Your account has not been approved by an administrator.",
+        });
+      }
+    }
+
+    // Check whether the customer account is blocked
+    if (user.role === "customer" && user.isActive === false) {
+      return res.status(403).json({
+        message:
+          "Your account has been blocked by the administrator. Please contact support.",
+      });
+    }
+
     const token = generateToken(user._id.toString());
 
     return res.status(200).json({

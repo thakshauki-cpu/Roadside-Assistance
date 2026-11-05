@@ -509,9 +509,7 @@ function AdminDashboard() {
               Customer Reviews
             </h2>
 
-            <span className="adm-badge grey">
-              Sample Data
-            </span>
+           
           </div>
 
           {customerReviews.map((review) => (

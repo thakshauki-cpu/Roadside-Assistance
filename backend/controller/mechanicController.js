@@ -4,7 +4,8 @@ import MechanicProfile from "../models/MechanicProfile.js";
 export const getOwnMechanicProfile = async (req, res) => {
   try {
     const profile = await MechanicProfile.findOne({ user: req.user })
-      .populate("user", "fullName mobile");
+      .populate("user", "fullName email mobile")
+      .lean();
 
     if (!profile) {
       return res.status(404).json({

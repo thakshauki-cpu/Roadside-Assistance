@@ -51,3 +51,13 @@ export const updateMechanicAvailability = (isAvailable) =>
 
 export const getPendingServiceRequests = () =>
   request("/api/service-requests/mechanic/pending");
+
+export const acceptServiceRequest = (requestId) =>
+  request(`/api/service-requests/mechanic/${encodeURIComponent(requestId)}/accept`, {
+    method: "PATCH",
+  });
+
+export const rejectServiceRequest = (requestId) =>
+  request(`/api/service-requests/mechanic/${encodeURIComponent(requestId)}/reject`, {
+    method: "PATCH",
+  });

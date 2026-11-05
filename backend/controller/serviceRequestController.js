@@ -10,10 +10,15 @@
 
 import Vehicle from "../models/Vehicle.js";
 import ServiceRequest from "../models/ServiceRequest.js";
+import mongoose from "mongoose";
 
-export const getPendingServiceRequests = async (_req, res) => {
+export const getPendingServiceRequests = async (req, res) => {
   try {
-    const requests = await ServiceRequest.find({ status: "pending" })
+    const requests = await ServiceRequest.find({
+      status: "pending",
+      mechanic: null,
+      rejectedMechanics: { $ne: req.user },
+    })
       .select("customer vehicle problem description location status createdAt")
       .populate("customer", "fullName mobile")
       .populate("vehicle", "vehicleType model registrationNumber")
@@ -25,6 +30,131 @@ export const getPendingServiceRequests = async (_req, res) => {
     console.error("Get pending service requests error:", error);
     return res.status(500).json({
       message: "Failed to fetch pending service requests.",
+    });
+  }
+};
+
+const getServiceRequestForAction = async (requestId, mechanicId, res) => {
+  if (!mongoose.Types.ObjectId.isValid(requestId)) {
+    res.status(400).json({ message: "Invalid service request ID." });
+    return null;
+  }
+
+  const request = await ServiceRequest.findById(requestId)
+    .select("status mechanic rejectedMechanics");
+
+  if (!request) {
+    res.status(404).json({ message: "Service request not found." });
+    return null;
+  }
+
+  if (
+    request.status !== "pending" ||
+    request.mechanic ||
+    request.rejectedMechanics?.some(
+      (rejectedMechanic) => rejectedMechanic.toString() === mechanicId
+    )
+  ) {
+    res.status(409).json({
+      message: "This service request is no longer available to you.",
+    });
+    return null;
+  }
+
+  return request;
+};
+
+const populateServiceRequest = (query) =>
+  query
+    .populate("customer", "fullName mobile")
+    .populate("vehicle", "vehicleType model registrationNumber")
+    .lean();
+
+export const acceptServiceRequest = async (req, res) => {
+  try {
+    const request = await getServiceRequestForAction(
+      req.params.requestId,
+      req.user,
+      res
+    );
+    if (!request) return;
+
+    const acceptedRequest = await populateServiceRequest(
+      ServiceRequest.findOneAndUpdate(
+        {
+          _id: req.params.requestId,
+          status: "pending",
+          mechanic: null,
+          rejectedMechanics: { $ne: req.user },
+        },
+        {
+          $set: {
+            status: "accepted",
+            mechanic: req.user,
+          },
+        },
+        { new: true, runValidators: true }
+      )
+    );
+
+    if (!acceptedRequest) {
+      return res.status(409).json({
+        message: "This service request is no longer available.",
+      });
+    }
+
+    return res.status(200).json({
+      message: "Service request accepted successfully.",
+      serviceRequest: acceptedRequest,
+    });
+  } catch (error) {
+    console.error("Accept service request error:", error);
+    return res.status(500).json({
+      message: "Failed to accept service request.",
+    });
+  }
+};
+
+export const rejectServiceRequest = async (req, res) => {
+  try {
+    const request = await getServiceRequestForAction(
+      req.params.requestId,
+      req.user,
+      res
+    );
+    if (!request) return;
+
+    const rejectedRequest = await populateServiceRequest(
+      ServiceRequest.findOneAndUpdate(
+        {
+          _id: req.params.requestId,
+          status: "pending",
+          mechanic: null,
+          rejectedMechanics: { $ne: req.user },
+        },
+        {
+          $addToSet: {
+            rejectedMechanics: req.user,
+          },
+        },
+        { new: true, runValidators: true }
+      )
+    );
+
+    if (!rejectedRequest) {
+      return res.status(409).json({
+        message: "This service request is no longer available.",
+      });
+    }
+
+    return res.status(200).json({
+      message: "Service request rejected. It remains active for other mechanics.",
+      serviceRequest: rejectedRequest,
+    });
+  } catch (error) {
+    console.error("Reject service request error:", error);
+    return res.status(500).json({
+      message: "Failed to reject service request.",
     });
   }
 };

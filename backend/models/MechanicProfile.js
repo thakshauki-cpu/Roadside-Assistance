@@ -47,10 +47,10 @@ const mechanicProfileSchema = new mongoose.Schema(
         trim: true,
       },
 
-      coordinates: {
-        type: [Number],
-        required: true,
-      },
+      // coordinates: {
+      //   type: [Number],
+      //   required: true,
+      // },
     },
 
     isAvailable: {

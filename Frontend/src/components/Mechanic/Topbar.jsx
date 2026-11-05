@@ -8,9 +8,12 @@ import {
 
 function MechanicTopbar({
   mechanicName = "Mechanic",
+  location = "Kallady, Batticaloa",
   notificationCount = 3,
   rating = "4.9",
   jobs = 142,
+  showStats = true,
+  showNotifications = true,
 }) {
   const name = mechanicName || "Mechanic";
 
@@ -27,11 +30,12 @@ function MechanicTopbar({
         />
       </div>
 
-      {/* Location */}
-      <div className="mech-pill">
-        <Crosshair size={14} />
-        Kallady, Batticaloa
-      </div>
+      {location && (
+        <div className="mech-pill">
+          <Crosshair size={14} />
+          {location}
+        </div>
+      )}
 
       {/* Right side */}
       <div className="mech-topbar-right">
@@ -41,20 +45,7 @@ function MechanicTopbar({
           Helpdesk: 065 222 4500
         </div>
 
-        {/* Notifications */}
-        <button
-          type="button"
-          className="mech-bell"
-          aria-label="Notifications"
-        >
-          <Bell size={19} />
-
-          {notificationCount > 0 && (
-            <span className="mech-bell-count">
-              {notificationCount}
-            </span>
-          )}
-        </button>
+      
 
         {/* Mechanic profile */}
         <div className="mech-user">
@@ -62,10 +53,12 @@ function MechanicTopbar({
           <div className="mech-user-text">
             <strong>{name}</strong>
 
-            <small>
-              <Star size={11} fill="currentColor" />
-              {rating} ({jobs} jobs)
-            </small>
+            {showStats && (
+              <small>
+                <Star size={11} fill="currentColor" />
+                {rating} ({jobs} jobs)
+              </small>
+            )}
           </div>
 
           <div className="mech-avatar">

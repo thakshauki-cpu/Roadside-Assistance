@@ -87,6 +87,16 @@ const serviceRequestSchema = new mongoose.Schema(
       ref: "User",
       default: null,
     },
+
+    rejectedMechanics: {
+      type: [
+        {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+        },
+      ],
+      default: [],
+    },
   },
   {
     timestamps: true,

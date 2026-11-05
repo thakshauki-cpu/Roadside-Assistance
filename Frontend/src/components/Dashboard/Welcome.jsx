@@ -176,9 +176,7 @@ function WelcomeSection() {
       {/* Greeting */}
       <div className="dashboard-greeting">
         <b>
-          Welcome,
-          <br /><br />
-          {firstName}!
+          Welcome  {firstName}!
         </b>
       </div>
 

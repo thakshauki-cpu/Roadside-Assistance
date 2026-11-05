@@ -11,9 +11,9 @@
   font-family: Arial, sans-serif;
 }
 
-/* ==============================
+/* 
    EXISTING SIDEBAR STYLING
-============================== */
+*/
 
 .mech-sidebar {
   width: 225px;
@@ -161,9 +161,9 @@
   font-size: 11px;
 }
 
-/* ==============================
+/* 
    EXISTING TOPBAR STYLING
-============================== */
+*/
 
 .service-main {
   flex: 1;
@@ -280,9 +280,9 @@
   font-weight: bold;
 }
 
-/* ==============================
+/* 
    PAGE HEADING
-============================== */
+ */
 
 .service-content {
   padding: 15px 20px 30px;
@@ -295,8 +295,10 @@
 .service-title h1 {
   margin: 0 0 5px;
   font-size: 28px;
-  font-weight: 800;
+  font-weight: 600;
   letter-spacing: -1px;
+  color:#192238;
+  text-align: left;
 }
 
 .service-title p {
@@ -305,6 +307,7 @@
   color: #53596c;
   font-size: 12px;
   line-height: 1.5;
+    text-align: left;
 }
 
 /* ==============================

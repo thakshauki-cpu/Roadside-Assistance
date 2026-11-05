@@ -1,0 +1,587 @@
+
+* {
+  box-sizing: border-box;
+}
+
+.mechanic-profile-page {
+  display: flex;
+  min-height: 100vh;
+  background: #f9f8ff;
+  color: #192238;
+  font-family: Arial, sans-serif;
+}
+
+.profile-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.profile-content {
+  padding: 14px 21px 25px;
+}
+
+/* PAGE HEADING */
+
+.profile-page-heading {
+  margin-bottom: 25px;
+}
+
+.profile-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #064cff;
+  font-size: 12px;
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+
+.profile-page-heading h1 {
+  margin: 0 0 5px;
+  font-size: 29px;
+  letter-spacing: -1px;
+  color: #192238;
+  text-align: left;
+}
+
+.profile-page-heading p {
+  max-width: 600px;
+  margin: 0;
+  color: #51576b;
+  font-size: 14px;
+  line-height: 1.5;
+  text-align: left;
+}
+
+.mechanic-profile-message {
+  margin: 0 0 20px;
+  padding: 14px 16px;
+  border: 1px solid #dfe5ff;
+  border-radius: 10px;
+  background: #fff;
+  color: #344058;
+}
+
+.mechanic-profile-message.error {
+  border-color: #f3c7cc;
+  color: #a51d31;
+}
+
+/* PERSONAL PROFILE CARD */
+
+.mechanic-personal-card {
+  background: white;
+  border: 1px solid #eeeef5;
+  border-radius: 13px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.personal-top {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.mechanic-profile-page .mechanic-photo-wrapper {
+  width: 113px;
+  height: 114px;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.mechanic-profile-page .mechanic-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 12px;
+  background: #e9e9e9;
+}
+
+.photo-verified {
+  position: absolute;
+  bottom: -5px;
+  right: -5px;
+  width: 23px;
+  height: 23px;
+  border-radius: 50%;
+  background: #00845b;
+  color: white;
+  display: grid;
+  place-items: center;
+  border: 2px solid white;
+}
+
+.mechanic-personal-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.mechanic-name-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mechanic-name-row h2 {
+  font-size: 24px;
+  margin: 0;
+  letter-spacing: -0.5px;
+  color: #064cff;
+}
+
+.mechanic-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 6px;
+}
+
+.experience-badge,
+.rating-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: bold;
+}
+
+.experience-badge {
+  background: #e8edff;
+  color: #064cff;
+}
+
+.business-name {
+  color: #454b60;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.mechanic-services {
+  margin: 9px 0;
+  color: #454b60;
+  font-size: 12px;
+}
+
+.mechanic-service-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.mechanic-service-list span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 16px;
+  background: #f0f1ff;
+  color: #344058;
+  font-size: 11px;
+}
+
+.mechanic-designation {
+  color: #454b60;
+  font-size: 14px;
+  line-height: 1.4;
+  margin: 7px 0;
+  max-width: 420px;
+}
+
+.mechanic-location-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  font-size: 11px;
+}
+
+.mechanic-location-row > span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #52596d;
+}
+
+.mechanic-location-row > span svg {
+  color: #0753ff;
+}
+
+.mechanic-location-row strong {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #00845b;
+  font-size: 11px;
+}
+
+.mechanic-location-row strong i {
+  width: 5px;
+  height: 5px;
+  background: #00845b;
+  border-radius: 50%;
+}
+
+/* CONTACT INFORMATION */
+
+.mechanic-contact-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+  background: #f2f3ff;
+  padding: 11px;
+  border-radius: 12px;
+  margin-top: 17px;
+}
+
+.contact-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.contact-icon {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  background: white;
+  border-radius: 9px;
+  color: #0753ff;
+}
+
+.contact-item:nth-child(2) .contact-icon {
+  color: #00845b;
+}
+
+.contact-item:nth-child(3) .contact-icon {
+  color: #a46a00;
+}
+
+.contact-item > div:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.contact-item span {
+  font-size: 10px;
+  color: #53596d;
+}
+
+.contact-item strong {
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+/* LOWER GRID */
+
+.profile-lower-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 0.9fr;
+  gap: 20px;
+  align-items: stretch;
+}
+
+.profile-panel {
+  min-width: 0;
+  background: white;
+  border: 1px solid #eeeef5;
+  border-radius: 13px;
+  padding: 20px;
+}
+
+/* PANEL HEADING */
+
+.panel-heading {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 15px;
+}
+
+.panel-title-icon {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+}
+
+.vehicle-icon {
+  background: #dfe5ff;
+  color: #064cff;
+}
+
+.certificate-icon {
+  background: #ffdfbd;
+  color: #633d00;
+}
+
+.panel-heading > div:nth-child(2) {
+  flex: 1;
+  min-width: 0;
+}
+
+.panel-heading h3 {
+  font-size: 17px;
+  margin: 0 0 3px;
+}
+
+.panel-heading p {
+  font-size: 11px;
+  color: #53596d;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.active-field-badge {
+  padding: 6px 9px;
+  border-radius: 20px;
+  background: #9cf5d2;
+  color: #007b55;
+  font-size: 10px;
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+/* VEHICLE DETAILS */
+
+.vehicle-designation-box {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  background: #f0f1ff;
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.vehicle-designation-box > div:first-child {
+  min-width: 0;
+}
+
+.vehicle-designation-box > div:first-child > span {
+  color: #51576b;
+  font-size: 10px;
+  font-weight: bold;
+}
+
+.vehicle-designation-box h3 {
+  font-size: 17px;
+  margin: 6px 0 4px;
+}
+
+.vehicle-designation-box p {
+  color: #51576b;
+  font-size: 11px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.registration-number {
+  flex-shrink: 0;
+  text-align: center;
+}
+
+.registration-number > span {
+  display: block;
+  font-size: 10px;
+  color: #51576b;
+  margin-bottom: 5px;
+}
+
+.registration-number strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: white;
+  border-radius: 8px;
+  padding: 7px 9px;
+  font-size: 15px;
+  letter-spacing: 1px;
+}
+
+.registration-number small {
+  background: #e8ebff;
+  padding: 4px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+/* INSPECTION AND INSURANCE */
+
+.vehicle-extra-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 13px;
+}
+
+.vehicle-extra-card {
+  background: #f0f1ff;
+  border-radius: 12px;
+  padding: 11px;
+  min-width: 0;
+}
+
+.vehicle-extra-card h4 {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  margin: 0 0 7px;
+}
+
+.inspection-title {
+  color: #00845b;
+}
+
+.insurance-title {
+  color: #0753ff;
+}
+
+.vehicle-extra-card > strong {
+  display: block;
+  font-size: 12px;
+  margin-bottom: 5px;
+}
+
+.vehicle-extra-card p {
+  color: #51576b;
+  font-size: 11px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* CERTIFICATIONS */
+
+.certification-panel .panel-heading {
+  margin-bottom: 15px;
+}
+
+.certificate-card {
+  background: #f0f1ff;
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 11px;
+}
+
+.certificate-card:last-child {
+  margin-bottom: 0;
+}
+
+.certificate-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 7px;
+  margin-bottom: 7px;
+}
+
+.certificate-top strong {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #0753ff;
+  font-size: 11px;
+}
+
+.certificate-top span {
+  background: #8df0c9;
+  color: #006c4b;
+  padding: 4px 8px;
+  border-radius: 5px;
+  font-size: 10px;
+  font-weight: bold;
+}
+
+.certificate-card h4 {
+  font-size: 13px;
+  margin: 0 0 5px;
+}
+
+.certificate-card p {
+  color: #51576b;
+  font-size: 11px;
+  line-height: 1.5;
+  margin: 0 0 8px;
+}
+
+.certificate-card > small {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #51576b;
+  font-size: 10px;
+}
+
+.certificate-card > small svg {
+  color: #00845b;
+}
+
+/* RESPONSIVE */
+
+@media (max-width: 1100px) {
+  .profile-lower-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 800px) {
+  .mechanic-contact-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .personal-top {
+    align-items: flex-start;
+  }
+
+  .profile-page-heading h1 {
+    font-size: 24px;
+  }
+}
+
+@media (max-width: 550px) {
+  .profile-content {
+    padding: 12px;
+  }
+
+  .mechanic-personal-card,
+  .profile-panel {
+    padding: 13px;
+  }
+
+  .personal-top {
+    flex-direction: column;
+  }
+
+  .mechanic-name-row h2 {
+    font-size: 22px;
+  }
+
+  .vehicle-designation-box {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .registration-number {
+    text-align: left;
+  }
+
+  .vehicle-extra-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .active-field-badge {
+    font-size: 9px;
+  }
+}
