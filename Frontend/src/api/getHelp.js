@@ -73,5 +73,14 @@ export const submitMockPayment = (requestId, payment) =>
     body: JSON.stringify(payment),
   });
 
+export const getCustomerReview = (requestId) =>
+  request(requestPath(requestId, "review"));
+
+export const submitCustomerReview = (requestId, review) =>
+  request(requestPath(requestId, "review"), {
+    method: "POST",
+    body: JSON.stringify(review),
+  });
+
 export const getServiceSummary = (requestId) =>
   request(requestPath(requestId, "summary"));

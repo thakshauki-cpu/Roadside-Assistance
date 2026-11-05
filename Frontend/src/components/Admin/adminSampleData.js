@@ -1,6 +1,5 @@
 // adminSampleData.js
-// Sample data for all admin pages.
-// Later this will come from the backend (API). For now it lives in one place.
+// Static examples for admin pages that have not yet been connected to the API.
 
 export const adminUser = { name: "Kumar Shan", role: "Super Admin • BT Dispatch" };
 
@@ -29,11 +28,6 @@ export const verificationQueue = [
   { id: 1, name: "Ravi Kumar", tag: "Auto Electricals", info: "Kallady Sub-hub • Experience: 6 yrs", chips: ["NIC Verified", "NVQ Level 4"], status: "pending" },
   { id: 2, name: "Batti Turbo Care", tag: "K. Selvam", info: "Puliyanthivu • Fleet Recovery Specialist", chips: ["Business Reg", "Workshop Insurance"], status: "pending" },
   { id: 3, name: "Navalady QuickFix", tag: "M. Farook", info: "Navalady Sector • Driving License & Police Clearance", chips: [], status: "approved" },
-];
-
-export const customerReviews = [
-  { id: 1, mechanic: "Siva Auto Care", stars: 5, text: "Siva arrived within 10 minutes at Kallady Bridge in the heavy rain. Fixed tyre quickly. Very honest charges in Rs.", by: "Kumar (Driver)", time: "18 mins ago" },
-  { id: 2, mechanic: "Ravi Kumar", stars: 4, text: "Jumpstarted my van at Clock tower before my office meeting. Highly recommended.", by: "Fathima Z.", time: "42 mins ago" },
 ];
 
 // ---------- Customers ----------

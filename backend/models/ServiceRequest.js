@@ -88,6 +88,11 @@ const serviceRequestSchema = new mongoose.Schema(
       default: null,
     },
 
+    completedAt: {
+      type: Date,
+      default: null,
+    },
+
     rejectedMechanics: {
       type: [
         {

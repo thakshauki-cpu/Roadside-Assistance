@@ -10,10 +10,12 @@ import {
   LogIn,
   Gauge,
   MapPin,
+  ShieldCheck,
 } from "lucide-react";
 
 import "../styles/LoginPage.css";
 import { Link, useNavigate } from "react-router-dom";
+import { adminLogin } from "../../api/admin.js";
 
 function LoginPage() {
   const navigate = useNavigate();
@@ -38,38 +40,52 @@ function LoginPage() {
 
   //   navigate("/dashboard");
   // };
-const handleLogin = async (event) => {
-  event.preventDefault();
-  setError("");
+  const handleLogin = async (event) => {
+    event.preventDefault();
+    setError("");
 
-  if (!email.trim() || !password) {
-    setError("Please enter your email and password.");
-    return;
-  }
+    if (!email.trim() || !password) {
+      setError(`Please enter your ${role === "admin" ? "admin " : ""}email and password.`);
+      return;
+    }
 
-  try {
-    setLoading(true);
+    try {
+      setLoading(true);
 
-    // Send email, password and role to the backend
-    const data = await loginUser({ email, password, role });
+      if (role === "admin") {
+        const data = await adminLogin({ email: email.trim(), password });
 
-    // Save the token and user so other pages can use them
-    localStorage.setItem("token", data.token);
-    localStorage.setItem("user", JSON.stringify(data.user));
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        sessionStorage.removeItem("adminToken");
+        sessionStorage.removeItem("adminUser");
+        const storage = rememberDevice ? localStorage : sessionStorage;
+        storage.setItem("adminToken", data.token);
+        storage.setItem("adminUser", JSON.stringify(data.admin));
+        navigate("/admin/dashboard", { replace: true });
+        return;
+      }
 
-   // Redirect the user according to their role.
-if (data.user.role === "mechanic") {
-  navigate("/mechanic/dashboard");
-} else if (data.user.role === "customer") {
-  navigate("/dashboard");
-}
-  } catch (err) {
-    // err.message is the message sent by the backend
-    setError(err.message);
-  } finally {
-    setLoading(false); // runs whether login worked or failed
-  }
-};
+      const data = await loginUser({ email, password, role });
+
+      localStorage.removeItem("adminToken");
+      localStorage.removeItem("adminUser");
+      sessionStorage.removeItem("adminToken");
+      sessionStorage.removeItem("adminUser");
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("user", JSON.stringify(data.user));
+
+      if (data.user.role === "mechanic") {
+        navigate("/mechanic/dashboard");
+      } else {
+        navigate("/dashboard");
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
   return (
     <main className="login-page">
       <section className="login-card">
@@ -113,12 +129,22 @@ if (data.user.role === "mechanic") {
             <BriefcaseBusiness size={14} />
             Mechanic / Tow
           </button>
+
+          <button
+            type="button"
+            className={`role-button ${role === "admin" ? "selected" : ""}`}
+            onClick={() => setRole("admin")}
+            aria-pressed={role === "admin"}
+          >
+            <ShieldCheck size={14} />
+            Admin
+          </button>
         </div>
 
         <form className="login-form" onSubmit={handleLogin}>
           <div className="login-label-row">
             <label htmlFor="login-identity">
-              Email 
+              {role === "admin" ? "Admin Email" : "Email"}
             </label>
           
           </div>
@@ -128,7 +154,7 @@ if (data.user.role === "mechanic") {
             <input
               id="login-identity"
               type="text"
-              placeholder=" driver@roadmate.lk"
+              placeholder={role === "admin" ? "admin@roadmate.lk" : "driver@roadmate.lk"}
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               autoComplete="username"
@@ -179,15 +205,12 @@ if (data.user.role === "mechanic") {
               <span>Remember device</span>
             </label>
 
-            <a href="#forgot-password" className="forgot-link">
+            {/* <a href="#forgot-password" className="forgot-link">
               Forgot password?
-            </a>
+            </a> */}
           </div>
 
-          {/* <button type="submit" className="login-submit-button">
-            <LogIn size={16} />
-            Login
-          </button> */}
+          
 
         {error && <p className="form-error">{error}</p>}
 
@@ -202,11 +225,17 @@ if (data.user.role === "mechanic") {
         </form>
 
         <div className="create-account-text">
-  Don't have an account?{" "}
-  {role === "customer" ? (
-    <Link to="/register">Register as Customer</Link>
+  {role === "admin" ? (
+    "Admin access is managed by RoadMate."
   ) : (
-    <Link to="/mechanic-register">Register as Mechanic</Link>
+    <>
+      Don't have an account?{" "}
+      {role === "customer" ? (
+        <Link to="/register">Register as Customer</Link>
+      ) : (
+        <Link to="/mechanic-register">Register as Mechanic</Link>
+      )}
+    </>
   )}
 </div>
 

@@ -70,6 +70,30 @@ export const getAdminDashboard = async () => {
   return data;
 };
 
+export const getAdminReviews = async () => {
+  const token =
+    localStorage.getItem("adminToken") ||
+    sessionStorage.getItem("adminToken");
+
+  if (!token) {
+    throw new Error("Admin token not found. Please login again.");
+  }
+
+  const response = await fetch(`${API_URL}/api/admin/reviews`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Unable to load customer reviews.");
+  }
+
+  return data;
+};
+
 
 // Get mechanic verification applications
 export const getAdminMechanics = async (status = "pending") => {

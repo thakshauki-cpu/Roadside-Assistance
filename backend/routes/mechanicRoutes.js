@@ -7,6 +7,7 @@ import {
 } from "../controller/mechanicController.js";
 import { protect } from "../middleware/authMiddleware.js";
 import { requireMechanic } from "../middleware/mechanicMiddleware.js";
+import { getMechanicReviews } from "../controller/reviewController.js";
 
 const router = express.Router();
 
@@ -19,5 +20,6 @@ router.patch(
   requireMechanic,
   updateOwnMechanicAvailability
 );
+router.get("/me/reviews", protect, requireMechanic, getMechanicReviews);
 
 export default router;

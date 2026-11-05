@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   Clock3,
   MapPin,
+  Star,
 } from "lucide-react";
 
 import MechanicSidebar from "../../Mechanic/MechanicSidebar";
@@ -16,6 +17,7 @@ import {
   acceptServiceRequest,
   rejectServiceRequest,
   updateMechanicAvailability,
+  getMechanicReviews,
 } from "../../../api/mechanic";
 
 import "../../styles/Mechanic/MechanicDashboard.css";
@@ -31,6 +33,9 @@ function MechanicDashboard() {
   const [processingRequestId, setProcessingRequestId] = useState(null);
   const [processingAction, setProcessingAction] = useState(null);
   const [requestActionFeedback, setRequestActionFeedback] = useState(null);
+  const [reviewData, setReviewData] = useState(null);
+  const [reviewsLoading, setReviewsLoading] = useState(true);
+  const [reviewsError, setReviewsError] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -67,6 +72,24 @@ function MechanicDashboard() {
         if (active) {
           setRequestsLoading(false);
         }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    getMechanicReviews()
+      .then((data) => {
+        if (active) setReviewData(data);
+      })
+      .catch((error) => {
+        if (active) setReviewsError(error.message);
+      })
+      .finally(() => {
+        if (active) setReviewsLoading(false);
       });
 
     return () => {
@@ -375,6 +398,53 @@ function MechanicDashboard() {
               </article>
             ))}
           </section>
+        </section>
+
+        <section className="mechanic-reviews">
+          <header className="mechanic-reviews-heading">
+            <div>
+              <h2><Star size={18} /> Customer Reviews</h2>
+              <p>Feedback for your completed service requests</p>
+            </div>
+            {!reviewsLoading && !reviewsError && (
+              <div className="mechanic-review-stats">
+                <strong><Star size={15} fill="currentColor" /> {reviewData?.stats?.averageRating ?? 0}</strong>
+                <span>{reviewData?.stats?.totalReviews ?? 0} reviews</span>
+              </div>
+            )}
+          </header>
+
+          {reviewsLoading ? (
+            <p role="status">Loading customer reviews...</p>
+          ) : reviewsError ? (
+            <p className="mechanic-reviews-error" role="alert">{reviewsError}</p>
+          ) : reviewData?.reviews?.length ? (
+            <div className="mechanic-review-list">
+              {reviewData.reviews.map((review) => {
+                const serviceRequest = review.serviceRequestId;
+                const serviceDate = serviceRequest?.completedAt || serviceRequest?.createdAt;
+
+                return (
+                  <article key={review._id} className="mechanic-review-card">
+                    <div className="mechanic-review-top">
+                      <strong>{review.customerId?.fullName || "Customer"}</strong>
+                      <span className="mechanic-review-stars" aria-label={`${review.rating} out of 5 stars`}>
+                        {"★".repeat(review.rating)}
+                      </span>
+                    </div>
+                    <p>{review.comment}</p>
+                    <small>
+                      {serviceRequest?.problem || "Service request"}
+                      {serviceRequest?.vehicle?.model ? ` · ${serviceRequest.vehicle.model}` : ""}
+                      {serviceDate ? ` · ${new Date(serviceDate).toLocaleDateString()}` : ""}
+                    </small>
+                  </article>
+                );
+              })}
+            </div>
+          ) : (
+            <p>No customer reviews yet.</p>
+          )}
         </section>
 
       </main>

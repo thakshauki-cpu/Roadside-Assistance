@@ -6,7 +6,7 @@ function AdminProtectedRoute({ children }) {
     sessionStorage.getItem("adminToken");
 
   if (!token) {
-    return <Navigate to="/admin/login" replace />;
+    return <Navigate to="/login" replace />;
   }
 
   return children;

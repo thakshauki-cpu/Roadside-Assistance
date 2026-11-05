@@ -52,6 +52,23 @@ export const updateMechanicAvailability = (isAvailable) =>
 export const getPendingServiceRequests = () =>
   request("/api/service-requests/mechanic/pending");
 
+export const getMechanicReviews = () => request("/api/mechanics/me/reviews");
+
+export const getMechanics = ({
+  search = "",
+  service = "All Services",
+  availableOnly = false,
+  signal,
+} = {}) => {
+  const params = new URLSearchParams();
+  if (search.trim()) params.set("search", search.trim());
+  if (service !== "All Services") params.set("service", service);
+  if (availableOnly) params.set("availableOnly", "true");
+
+  const query = params.toString();
+  return request(`/api/mechanics${query ? `?${query}` : ""}`, { signal });
+};
+
 export const acceptServiceRequest = (requestId) =>
   request(`/api/service-requests/mechanic/${encodeURIComponent(requestId)}/accept`, {
     method: "PATCH",

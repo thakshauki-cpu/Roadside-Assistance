@@ -13,6 +13,7 @@ getAdminCustomerById,
 updateCustomerStatus,
 getAdminMechanicById,
 } from "../controller/adminController.js";
+import { getAdminReviews } from "../controller/reviewController.js";
 
 import {
   protectAdmin,
@@ -31,6 +32,7 @@ router.get("/me", getAdminMe);
 
 // Admin Dashboard
 router.get("/dashboard", getAdminDashboard);
+router.get("/reviews", getAdminReviews);
 
 // Mechanic verification
 router.get("/mechanics", getAdminMechanics);

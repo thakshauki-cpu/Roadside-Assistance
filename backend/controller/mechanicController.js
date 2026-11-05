@@ -1,5 +1,8 @@
 
 import MechanicProfile from "../models/MechanicProfile.js";
+import User from "../models/User.js";
+
+const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 export const getOwnMechanicProfile = async (req, res) => {
   try {
@@ -75,30 +78,156 @@ export const getMechanics = async (req, res) => {
       query.isAvailable = true;
     }
 
-    // Search by business name, service or address
-    if (search && search.trim()) {
-      const searchRegex = new RegExp(search.trim(), "i");
+    if (typeof search === "string" && search.trim()) {
+      const searchTerm = search.trim();
+      if (searchTerm.length > 100) {
+        return res.status(400).json({
+          success: false,
+          message: "Search term must be 100 characters or fewer.",
+        });
+      }
 
-      query.$or = [
+      const searchRegex = new RegExp(escapeRegex(searchTerm), "i");
+      const matchingMechanicUsers = await User.find({
+        role: "mechanic",
+        $or: [
+          { fullName: searchRegex },
+          { email: searchRegex },
+          { mobile: searchRegex },
+        ],
+      })
+        .select("_id")
+        .lean();
+
+      const searchConditions = [
         { businessName: searchRegex },
         { services: searchRegex },
         { "location.address": searchRegex },
+        { phone: searchRegex },
+        { verificationStatus: searchRegex },
+        {
+          $expr: {
+            $regexMatch: {
+              input: { $toString: "$_id" },
+              regex: searchRegex.source,
+              options: "i",
+            },
+          },
+        },
+        {
+          $expr: {
+            $regexMatch: {
+              input: { $ifNull: [{ $toString: "$experience" }, ""] },
+              regex: searchRegex.source,
+              options: "i",
+            },
+          },
+        },
+        {
+          $expr: {
+            $regexMatch: {
+              input: {
+                $cond: [
+                  "$isAvailable",
+                  "Available Now",
+                  "Unavailable",
+                ],
+              },
+              regex: searchRegex.source,
+              options: "i",
+            },
+          },
+        },
+        {
+          $expr: {
+            $regexMatch: {
+              input: {
+                $cond: [
+                  "$isVerified",
+                  "Verified Partner",
+                  "Verification Pending",
+                ],
+              },
+              regex: searchRegex.source,
+              options: "i",
+            },
+          },
+        },
+        ...["createdAt", "updatedAt"].flatMap((dateField) => [
+          {
+            $expr: {
+              $regexMatch: {
+                input: {
+                  $ifNull: [
+                    {
+                      $dateToString: {
+                        date: `$${dateField}`,
+                        format: "%Y-%m-%d %H:%M:%S",
+                        timezone: "UTC",
+                      },
+                    },
+                    "",
+                  ],
+                },
+                regex: searchRegex.source,
+                options: "i",
+              },
+            },
+          },
+          {
+            $expr: {
+              $regexMatch: {
+                input: {
+                  $ifNull: [
+                    {
+                      $dateToString: {
+                        date: `$${dateField}`,
+                        format: "%d/%m/%Y",
+                        timezone: "UTC",
+                      },
+                    },
+                    "",
+                  ],
+                },
+                regex: searchRegex.source,
+                options: "i",
+              },
+            },
+          },
+        ]),
       ];
+
+      if (matchingMechanicUsers.length > 0) {
+        searchConditions.push({
+          user: { $in: matchingMechanicUsers.map(({ _id }) => _id) },
+        });
+      }
+
+      query.$or = searchConditions;
     }
 
     // Filter by selected service
-    if (service && service !== "All Services") {
-      const serviceRegex = new RegExp(service.trim(), "i");
+    if (
+      typeof service === "string" &&
+      service.trim() &&
+      service !== "All Services"
+    ) {
+      const serviceRegex = new RegExp(escapeRegex(service.trim()), "i");
       query.services = serviceRegex;
     }
 
-    const mechanics = await MechanicProfile.find(query)
-      .populate("user", "fullName mobile")
-      .sort({ createdAt: -1 });
+    const [mechanics, availableCount] = await Promise.all([
+      MechanicProfile.find(query)
+        .populate("user", "fullName mobile")
+        .sort({ createdAt: -1 })
+        .lean(),
+      MechanicProfile.countDocuments({ isAvailable: true }),
+    ]);
 
     return res.status(200).json({
       success: true,
       count: mechanics.length,
+      availableCount,
       mechanics,
     });
   } catch (error) {

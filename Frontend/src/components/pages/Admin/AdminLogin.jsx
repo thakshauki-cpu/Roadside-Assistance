@@ -41,9 +41,14 @@ function AdminLogin() {
         password,
       });
 
-      // Save Admin token separately
-      const storage = remember ? localStorage : sessionStorage;
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      localStorage.removeItem("adminToken");
+      localStorage.removeItem("adminUser");
+      sessionStorage.removeItem("adminToken");
+      sessionStorage.removeItem("adminUser");
 
+      const storage = remember ? localStorage : sessionStorage;
       storage.setItem("adminToken", data.token);
       storage.setItem("adminUser", JSON.stringify(data.admin));
 

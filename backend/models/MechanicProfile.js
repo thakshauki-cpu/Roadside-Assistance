@@ -47,10 +47,21 @@ const mechanicProfileSchema = new mongoose.Schema(
         trim: true,
       },
 
-      // coordinates: {
-      //   type: [Number],
-      //   required: true,
-      // },
+      coordinates: {
+        type: [Number],
+        default: undefined,
+        validate: {
+          validator: (coordinates) =>
+            coordinates === undefined ||
+            (coordinates.length === 2 &&
+              coordinates.every(Number.isFinite) &&
+              coordinates[0] >= -180 &&
+              coordinates[0] <= 180 &&
+              coordinates[1] >= -90 &&
+              coordinates[1] <= 90),
+          message: "Mechanic coordinates must contain longitude and latitude.",
+        },
+      },
     },
 
     isAvailable: {

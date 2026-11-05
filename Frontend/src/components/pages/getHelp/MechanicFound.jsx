@@ -211,7 +211,9 @@ function MechanicFound() {
                     </p>
 
                     <div className="mechanic-badges">
-                      <span className="distance-badge">● {mechanic.distanceKm} km away</span>
+                      <span className="distance-badge">
+                        ● {mechanic.distanceKm === null ? "Distance unavailable" : `${mechanic.distanceKm} km away`}
+                      </span>
                       <span className="eta-badge">
                         <Zap size={13} /> ETA ~{mechanic.etaMinutes} mins
                       </span>

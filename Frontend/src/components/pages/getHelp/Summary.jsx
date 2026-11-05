@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import {
   Check,
   ClipboardList,
@@ -24,7 +23,9 @@ import RequestStepper from "../../gethelp/RequestStepper";
 import {
   getAssignment,
   getCompletion,
+  getCustomerReview,
   getServiceSummary,
+  submitCustomerReview,
   submitMockPayment,
 } from "../../../api/getHelp";
 import {
@@ -49,9 +50,6 @@ const paymentMethods = [
   { id: "qr", name: "QR / Digital", text: "FriMi, Koko, Genie & LANKAQR", icon: QrCode },
 ];
 
-// Quick feedback tags
-const feedbackTags = ["Prompt Arrival", "Polite & Professional", "Fair Pricing", "Quick Fix", "Clean Work"];
-
 // Words shown under the stars
 const ratingWords = ["", "Poor", "Fair", "Good", "Very Good", "Exceptional Service"];
 
@@ -59,7 +57,6 @@ const ratingWords = ["", "Poor", "Fair", "Good", "Very Good", "Exceptional Servi
 const tipOptions = [0, 200, 500];
 
 function Summary() {
-  const navigate = useNavigate();
   const requestId = getCreatedRequestId();
   const draft = readRequest();
   const createdRequest = readCreatedRequest();
@@ -73,11 +70,14 @@ function Summary() {
   // Things the customer can change on this page
   const [payment, setPayment] = useState("cash");
   const [rating, setRating] = useState(5);
-  const [tags, setTags] = useState(["Prompt Arrival", "Polite & Professional"]);
   const [review, setReview] = useState("");
   const [tip, setTip] = useState(200); // change 200 to 0 for "No Tip" at the start
   const [customOpen, setCustomOpen] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+  const [paymentSubmitted, setPaymentSubmitted] = useState(false);
+  const [reviewRecord, setReviewRecord] = useState(null);
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [reviewError, setReviewError] = useState("");
+  const [reviewSuccess, setReviewSuccess] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -86,13 +86,19 @@ function Summary() {
         if (!requestId) {
           throw new Error("Your service request is missing. Please submit it again.");
         }
-        const [assignmentData, completionData] = await Promise.all([
+        const [assignmentData, completionData, reviewData] = await Promise.all([
           getAssignment(requestId),
           getCompletion(requestId),
+          getCustomerReview(requestId),
         ]);
         if (active) {
           setAssignment(assignmentData);
           setCompletion(completionData.completion);
+          if (reviewData.review) {
+            setReviewRecord(reviewData.review);
+            setRating(reviewData.review.rating);
+            setReview(reviewData.review.comment);
+          }
         }
       } catch (loadError) {
         if (active) setError(loadError.message);
@@ -147,11 +153,6 @@ function Summary() {
 
   const grandTotal = summary?.payment?.amount || serviceTotal + tip;
 
-  // Add the tag if it is not selected, remove it if it is
-  const toggleTag = (tag) => {
-    setTags((current) => (current.includes(tag) ? current.filter((t) => t !== tag) : [...current, tag]));
-  };
-
   // Typing a custom tip: keep digits only
   const handleCustomTip = (event) => {
     const digits = event.target.value.replace(/\D/g, "");
@@ -166,11 +167,6 @@ function Summary() {
       setError("");
       const summaryData = await getServiceSummary(requestId);
       setSummary(summaryData);
-      setTimeout(() => {
-        localStorage.removeItem("serviceRequest");
-        localStorage.removeItem("createdServiceRequest");
-        navigate("/dashboard");
-      }, 1800);
     } catch (summaryError) {
       setError(`Payment is confirmed, but the service summary could not load: ${summaryError.message}`);
     }
@@ -183,16 +179,33 @@ function Summary() {
       await submitMockPayment(requestId, {
         paymentMethod: payment,
         tip,
-        rating,
-        feedbackTags: tags,
-        review,
       });
-      setSubmitted(true);
+      setPaymentSubmitted(true);
       await loadSummary();
     } catch (paymentError) {
       setError(paymentError.message);
     } finally {
       setPaymentLoading(false);
+    }
+  };
+
+  const handleSubmitReview = async () => {
+    if (!review.trim()) {
+      setReviewError("Please write a review before submitting.");
+      return;
+    }
+
+    try {
+      setReviewSubmitting(true);
+      setReviewError("");
+      setReviewSuccess("");
+      const result = await submitCustomerReview(requestId, { rating, comment: review });
+      setReviewRecord(result.review);
+      setReviewSuccess(result.message);
+    } catch (submitError) {
+      setReviewError(submitError.message);
+    } finally {
+      setReviewSubmitting(false);
     }
   };
 
@@ -441,6 +454,7 @@ function Summary() {
                         aria-label={number + " star" + (number > 1 ? "s" : "")}
                         className={number <= rating ? "on" : ""}
                         onClick={() => setRating(number)}
+                        disabled={Boolean(reviewRecord)}
                       >
                         <Star size={28} fill={number <= rating ? "currentColor" : "none"} />
                       </button>
@@ -451,23 +465,9 @@ function Summary() {
                   </strong>
                 </div>
 
-                {/* Tags */}
-                <p className="done-label">What went well? (Select all that apply)</p>
-                <div className="done-tags">
-                  {feedbackTags.map((tag) => {
-                    const on = tags.includes(tag);
-                    return (
-                      <button key={tag} type="button" className={on ? "on" : ""} onClick={() => toggleTag(tag)}>
-                        {on && "✓ "}
-                        {tag}
-                      </button>
-                    );
-                  })}
-                </div>
-
                 {/* Review */}
                 <label className="done-label" htmlFor="review">
-                  Message or Review for {mechanic.name}
+                  Written review for {mechanic.name}
                 </label>
                 <textarea
                   id="review"
@@ -475,7 +475,24 @@ function Summary() {
                   placeholder="e.g. Arrived quickly and repaired the tyre neatly."
                   value={review}
                   onChange={(event) => setReview(event.target.value)}
+                  maxLength={1000}
+                  disabled={Boolean(reviewRecord)}
                 />
+                {!reviewRecord && (
+                  <button
+                    type="button"
+                    className="gh-next-button done-review-submit"
+                    onClick={handleSubmitReview}
+                    disabled={reviewSubmitting}
+                  >
+                    {reviewSubmitting ? "Submitting review..." : "Submit Review"}
+                  </button>
+                )}
+                {reviewSuccess && <p className="done-review-success" role="status">{reviewSuccess}</p>}
+                {reviewRecord && !reviewSuccess && (
+                  <p className="done-review-success" role="status">You have already reviewed this completed service.</p>
+                )}
+                {reviewError && <p className="form-error" role="alert">{reviewError}</p>}
 
                 {/* Tip */}
                 <div className="done-tip-top">
@@ -535,16 +552,16 @@ function Summary() {
                 type="button"
                 className="gh-next-button"
                 onClick={handlePay}
-                disabled={submitted || paymentLoading}
+                disabled={paymentSubmitted || paymentLoading}
               >
                 <Check size={16} />
                 {paymentLoading
                   ? "Processing mock payment..."
-                  : submitted
-                  ? "Submitted. Thank you!"
+                  : paymentSubmitted
+                  ? "Payment Confirmed"
                   : "Pay & Submit (" + formatRs(grandTotal) + ")"}
               </button>
-              {submitted && !summary && (
+              {paymentSubmitted && !summary && (
                 <button
                   type="button"
                   className="done-download"

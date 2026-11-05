@@ -1,7 +1,8 @@
 import mongoose from "mongoose";
+import MechanicProfile from "../models/MechanicProfile.js";
+import Review from "../models/Review.js";
 import ServiceRequest from "../models/ServiceRequest.js";
 import {
-  mockMechanics,
   mockQuotation,
   mockTracking,
   mockWorkByProblem,
@@ -22,7 +23,9 @@ const findOwnedRequest = async (req, res) => {
   const request = await ServiceRequest.findOne({
     _id: requestId,
     customer: req.user,
-  }).populate("vehicle", "vehicleType model registrationNumber");
+  })
+    .populate("vehicle", "vehicleType model registrationNumber")
+    .populate("mechanic", "fullName mobile");
 
   if (!request) {
     res.status(404).json({
@@ -89,35 +92,111 @@ const calculateDistanceKm = (first, second) => {
   );
 };
 
-const getEligibleMechanics = (request, state) => {
+const getEligibleMechanics = async (request, state) => {
   const customerCoordinates = getCustomerCoordinates(request);
   if (!customerCoordinates) return null;
 
-  return mockMechanics
-    .filter(
-      (mechanic) =>
-        mechanic.available &&
-        !state.rejectedMechanicIds.includes(mechanic.id)
-    )
-    .map((mechanic) => {
-      const distance = calculateDistanceKm(customerCoordinates, {
-        latitude: mechanic.latitude,
-        longitude: mechanic.longitude,
-      });
+  const assignedMechanicId = request.mechanic?._id || request.mechanic;
+  const excludedMechanics = [
+    ...(request.rejectedMechanics || []),
+    ...state.rejectedMechanicIds,
+  ];
+  const profiles = await MechanicProfile.find(
+    assignedMechanicId
+      ? { user: assignedMechanicId, isVerified: true, verificationStatus: "approved" }
+      : {
+          isAvailable: true,
+          isVerified: true,
+          verificationStatus: "approved",
+          user: { $nin: excludedMechanics },
+        }
+  )
+    .populate("user", "fullName mobile")
+    .lean();
+
+  const mechanicIds = profiles.map((profile) => profile.user?._id).filter(Boolean);
+  const [ratingRows, completedRows] = await Promise.all([
+    Review.aggregate([
+      { $match: { mechanicId: { $in: mechanicIds } } },
+      {
+        $group: {
+          _id: "$mechanicId",
+          averageRating: { $avg: "$rating" },
+          totalReviews: { $sum: 1 },
+        },
+      },
+    ]),
+    ServiceRequest.aggregate([
+      {
+        $match: {
+          mechanic: { $in: mechanicIds },
+          status: "completed",
+        },
+      },
+      { $group: { _id: "$mechanic", total: { $sum: 1 } } },
+    ]),
+  ]);
+  const ratingsByMechanic = new Map(
+    ratingRows.map((row) => [row._id.toString(), row])
+  );
+  const completionsByMechanic = new Map(
+    completedRows.map((row) => [row._id.toString(), row.total])
+  );
+
+  return profiles
+    .map((profile) => {
+      const mechanicId = profile.user._id.toString();
+      const [longitude, latitude] = profile.location?.coordinates || [];
+      const hasCoordinates =
+        Number.isFinite(longitude) &&
+        Number.isFinite(latitude) &&
+        longitude >= -180 &&
+        longitude <= 180 &&
+        latitude >= -90 &&
+        latitude <= 90;
+      const distance = hasCoordinates
+        ? calculateDistanceKm(customerCoordinates, { latitude, longitude })
+        : null;
+      const rating = ratingsByMechanic.get(mechanicId);
+      const completedJobs = completionsByMechanic.get(mechanicId) || 0;
 
       return {
-        mechanic,
+        id: mechanicId,
+        name: profile.businessName || profile.user.fullName,
+        owner: profile.user.fullName,
+        role: "Roadside Mechanic",
+        latitude: hasCoordinates ? latitude : null,
+        longitude: hasCoordinates ? longitude : null,
+        rating: rating ? Number(rating.averageRating.toFixed(2)) : 0,
+        reviews: rating?.totalReviews || 0,
+        rescues: completedJobs,
+        address: profile.location?.address || "",
+        depot: profile.location?.address || "",
+        unit: profile.businessName || "Roadside service unit",
+        plate: "",
+        verified: profile.isVerified && profile.verificationStatus === "approved",
+        phoneVerified: false,
+        policeCleared: false,
+        specialties: profile.services || [],
+        available: profile.isAvailable,
         distance,
       };
     })
-    .sort((first, second) => first.distance - second.distance)
-    .map(({ mechanic, distance }) => ({
+    .sort(
+      (first, second) =>
+        (first.distance ?? Number.POSITIVE_INFINITY) -
+        (second.distance ?? Number.POSITIVE_INFINITY)
+    )
+    .map(({ distance, ...mechanic }) => ({
       ...mechanic,
-      distanceKm: Number(distance.toFixed(2)),
-      etaMinutes: Math.max(
-        1,
-        Math.ceil((distance / MECHANIC_AVERAGE_SPEED_KMH) * 60)
-      ),
+      distanceKm: distance === null ? null : Number(distance.toFixed(2)),
+      etaMinutes:
+        distance === null
+          ? mockTracking.etaMinutes
+          : Math.max(
+              1,
+              Math.ceil((distance / MECHANIC_AVERAGE_SPEED_KMH) * 60)
+            ),
     }));
 };
 
@@ -131,9 +210,6 @@ const getCurrentSuggestion = (mechanics, state) => {
   return mechanics[0] || null;
 };
 
-const getAssignedMechanic = (mechanicId) =>
-  mockMechanics.find((mechanic) => mechanic.id === mechanicId) || null;
-
 const getRequestReference = (requestId) =>
   `RM-${requestId.slice(-6).toUpperCase()}`;
 
@@ -145,14 +221,15 @@ const handleError = (res, label, error) => {
   });
 };
 
-//this is giving mock data for the nearby mechanics, assignment, tracking, completion, payment, and summary of the service request. It is not connected to the database or any real-time data.
+// Mechanic matching and service-request state are MongoDB-backed. Tracking and
+// payment confirmation remain demo implementations.
 export const getNearbyMechanics = async (req, res) => {
   try {
     const request = await findOwnedRequest(req, res);
     if (!request) return;
 
     const state = getWorkflowState(request.id);
-    const mechanics = getEligibleMechanics(request, state);
+    const mechanics = await getEligibleMechanics(request, state);
     if (!mechanics) {
       return res.status(400).json({
         success: false,
@@ -168,17 +245,17 @@ export const getNearbyMechanics = async (req, res) => {
       noMechanicsAvailable: mechanics.length === 0,
     });
   } catch (error) {
-    return handleError(res, "Get nearby mock mechanics error", error);
+    return handleError(res, "Get nearby mechanics error", error);
   }
 };
-//It provides the mock mechanic, quotation, reference, and quotation status assigned to that reques
+
 export const getAssignment = async (req, res) => {
   try {
     const request = await findOwnedRequest(req, res);
     if (!request) return;
 
     const state = getWorkflowState(request.id);
-    const mechanics = getEligibleMechanics(request, state);
+    const mechanics = await getEligibleMechanics(request, state);
     if (!mechanics) {
       return res.status(400).json({
         success: false,
@@ -186,15 +263,16 @@ export const getAssignment = async (req, res) => {
       });
     }
 
-    const mechanic = state.acceptedMechanicId
-      ? mechanics.find((item) => item.id === state.acceptedMechanicId) ||
-        getAssignedMechanic(state.acceptedMechanicId)
+    const assignedMechanicId =
+      request.mechanic?._id?.toString() || request.mechanic?.toString();
+    const mechanic = assignedMechanicId
+      ? mechanics.find((item) => item.id === assignedMechanicId) || null
       : getCurrentSuggestion(mechanics, state);
     return res.status(200).json({
       success: true,
       requestId: request.id,
       requestReference: getRequestReference(request.id),
-      status: state.quotationResponse || "pending",
+      status: request.status,
       mechanic,
       noMechanicsAvailable: !mechanic,
       quotation: {
@@ -203,11 +281,10 @@ export const getAssignment = async (req, res) => {
       },
     });
   } catch (error) {
-    return handleError(res, "Get mock assignment error", error);
+    return handleError(res, "Get mechanic assignment error", error);
   }
 };
 
-//when customer accepts or reject 
 export const respondToQuotation = async (req, res) => {
   try {
     const request = await findOwnedRequest(req, res);
@@ -220,21 +297,27 @@ export const respondToQuotation = async (req, res) => {
         message: "Mechanic response must be accepted or rejected.",
       });
     }
-    if (typeof mechanicId !== "string" || !mechanicId) {
+    if (
+      typeof mechanicId !== "string" ||
+      !mongoose.Types.ObjectId.isValid(mechanicId)
+    ) {
       return res.status(400).json({
         success: false,
-        message: "A mechanic ID is required.",
+        message: "A valid mechanic ID is required.",
       });
     }
 
     const state = getWorkflowState(request.id);
-    if (state.acceptedMechanicId) {
-      if (response === "accepted" && state.acceptedMechanicId === mechanicId) {
+    const assignedMechanicId =
+      request.mechanic?._id?.toString() || request.mechanic?.toString();
+    if (assignedMechanicId) {
+      if (response === "accepted" && assignedMechanicId === mechanicId) {
+        const [assignedMechanic] = await getEligibleMechanics(request, state);
         return res.status(200).json({
           success: true,
           requestId: request.id,
           response,
-          mechanic: getAssignedMechanic(state.acceptedMechanicId),
+          mechanic: assignedMechanic || null,
           message: "Mechanic accepted.",
         });
       }
@@ -244,7 +327,13 @@ export const respondToQuotation = async (req, res) => {
       });
     }
 
-    const mechanics = getEligibleMechanics(request, state);
+    if (!["pending", "searching"].includes(request.status)) {
+      return res.status(409).json({
+        message: "This service request can no longer be assigned.",
+      });
+    }
+
+    const mechanics = await getEligibleMechanics(request, state);
     if (!mechanics) {
       return res.status(400).json({
         success: false,
@@ -261,6 +350,29 @@ export const respondToQuotation = async (req, res) => {
     }
 
     if (response === "accepted") {
+      const assignedRequest = await ServiceRequest.findOneAndUpdate(
+        {
+          _id: request._id,
+          customer: req.user,
+          mechanic: null,
+          status: { $in: ["pending", "searching"] },
+        },
+        {
+          $set: {
+            mechanic: currentMechanic.id,
+            status: "accepted",
+          },
+        },
+        { new: true, runValidators: true }
+      );
+      if (!assignedRequest) {
+        return res.status(409).json({
+          message: "This service request was assigned by another action.",
+        });
+      }
+
+      request.mechanic = assignedRequest.mechanic;
+      request.status = assignedRequest.status;
       state.acceptedMechanicId = currentMechanic.id;
       state.quotationResponse = "accepted";
       return res.status(200).json({
@@ -272,10 +384,15 @@ export const respondToQuotation = async (req, res) => {
       });
     }
 
+    await ServiceRequest.updateOne(
+      { _id: request._id, customer: req.user, mechanic: null },
+      { $addToSet: { rejectedMechanics: currentMechanic.id } }
+    );
+    request.rejectedMechanics.push(currentMechanic.id);
     state.rejectedMechanicIds.push(currentMechanic.id);
     state.quotationResponse = null;
     state.currentSuggestedMechanicId = null;
-    const nextMechanics = getEligibleMechanics(request, state);
+    const nextMechanics = await getEligibleMechanics(request, state);
     const nextMechanic = getCurrentSuggestion(nextMechanics, state);
     return res.status(200).json({
       success: true,
@@ -288,30 +405,30 @@ export const respondToQuotation = async (req, res) => {
         : "No more mechanics available.",
     });
   } catch (error) {
-    return handleError(res, "Save mock quotation response error", error);
+    return handleError(res, "Save mechanic quotation response error", error);
   }
 };
 
-//when quatation is accepted after that customer can track the mechanic and the service request
 export const getTracking = async (req, res) => {
   try {
     const request = await findOwnedRequest(req, res);
     if (!request) return;
 
     const state = getWorkflowState(request.id);
-    if (state.quotationResponse !== "accepted") {
+    if (!request.mechanic) {
       return res.status(409).json({
         success: false,
         message: "Accept the quotation before viewing tracking.",
       });
     }
+    const [mechanic] = await getEligibleMechanics(request, state);
 
     return res.status(200).json({
       success: true,
       requestId: request.id,
       requestReference: getRequestReference(request.id),
       status: "on_the_way",
-      mechanic: getAssignedMechanic(state.acceptedMechanicId),
+      mechanic: mechanic || null,
       dispatchedAt: new Date().toISOString(),
       expectedArrivalAt: new Date(
         Date.now() + mockTracking.etaMinutes * 60 * 1000
@@ -338,11 +455,29 @@ export const getCompletion = async (req, res) => {
     if (!request) return;
 
     const state = getWorkflowState(request.id);
-    if (state.quotationResponse !== "accepted") {
+    if (
+      !request.mechanic ||
+      !["accepted", "on_the_way", "in_progress", "completed"].includes(
+        request.status
+      )
+    ) {
       return res.status(409).json({
         success: false,
-        message: "Accept the quotation before completing service.",
+        message: "Assign a mechanic before completing service.",
       });
+    }
+
+    const [mechanic] = await getEligibleMechanics(request, state);
+    if (!mechanic) {
+      return res.status(409).json({
+        message: "The assigned mechanic profile could not be found.",
+      });
+    }
+
+    if (request.status !== "completed" || !request.completedAt) {
+      request.status = "completed";
+      request.completedAt = request.completedAt || new Date();
+      await request.save();
     }
 
     if (!state.completion) {
@@ -350,12 +485,15 @@ export const getCompletion = async (req, res) => {
         mockWorkByProblem.Other;
       state.completion = {
         status: "completed",
-        completedAt: new Date().toISOString(),
+        completedAt: request.completedAt.toISOString(),
         workCompleted: problemWork.work,
         problemTitle: problemWork.title,
-        mechanic: getAssignedMechanic(state.acceptedMechanicId),
+        mechanic,
         responseTimeMinutes: mockTracking.etaMinutes,
       };
+    } else {
+      state.completion.completedAt = request.completedAt.toISOString();
+      state.completion.mechanic = mechanic;
     }
 
     return res.status(200).json({
@@ -375,7 +513,7 @@ export const submitPayment = async (req, res) => {
     if (!request) return;
 
     const state = getWorkflowState(request.id);
-    if (state.quotationResponse !== "accepted" || !state.completion) {
+    if (request.status !== "completed" || !request.mechanic || !state.completion) {
       return res.status(409).json({
         success: false,
         message: "Complete the service before submitting payment.",
@@ -385,9 +523,6 @@ export const submitPayment = async (req, res) => {
     const {
       paymentMethod,
       tip = 0,
-      rating,
-      feedbackTags = [],
-      review = "",
     } = req.body || {};
 
     if (!["cash", "card", "qr"].includes(paymentMethod)) {
@@ -401,28 +536,6 @@ export const submitPayment = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: "Tip must be a non-negative number.",
-      });
-    }
-
-    if (
-      rating !== undefined &&
-      (!Number.isInteger(rating) || rating < 1 || rating > 5)
-    ) {
-      return res.status(400).json({
-        success: false,
-        message: "Rating must be a whole number from 1 to 5.",
-      });
-    }
-
-    if (
-      !Array.isArray(feedbackTags) ||
-      feedbackTags.some((tag) => typeof tag !== "string") ||
-      typeof review !== "string" ||
-      review.length > 1000
-    ) {
-      return res.status(400).json({
-        success: false,
-        message: "Review or feedback is invalid.",
       });
     }
 
@@ -441,9 +554,6 @@ export const submitPayment = async (req, res) => {
       tip,
       amount: total,
       confirmationCode: `MOCK-${request.id.slice(-6).toUpperCase()}`,
-      rating: rating ?? null,
-      feedbackTags,
-      review: review.trim(),
       paidAt: new Date().toISOString(),
     };
 
@@ -478,7 +588,7 @@ export const getSummary = async (req, res) => {
       vehicle: request.vehicle,
       problem: request.problem,
       description: request.description,
-      mechanic: getAssignedMechanic(state.acceptedMechanicId),
+      mechanic: state.completion.mechanic,
       quotation: mockQuotation,
       completion: state.completion,
       payment: state.payment,

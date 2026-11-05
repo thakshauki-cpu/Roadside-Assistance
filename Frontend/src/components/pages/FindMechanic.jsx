@@ -1,5 +1,5 @@
 
-import { useMemo, useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
   Search,
   Star,
@@ -22,6 +22,7 @@ import {
 
 import DashboardSidebar from "../Dashboard/Sidebar";
 import DashboardTopbar from "../Dashboard/Topbar";
+import { getMechanics } from "../../api/mechanic";
 import "../styles/FindMechanic.css";
 
 const filters = ["All Services", "Tyre Repair", "Battery", "Towing"];
@@ -34,84 +35,49 @@ function FindMechanic() {
   const [showAvailableOnly, setShowAvailableOnly] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [mechanics, setMechanics] = useState([]);
+  const [availableCount, setAvailableCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const fetchMechanics = async () => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(async () => {
       try {
         setLoading(true);
         setError("");
 
-        const token = localStorage.getItem("token");
-
-        if (!token) {
-          throw new Error("Please login to view mechanics.");
-        }
-
-        const response = await fetch(
-          `${import.meta.env.VITE_API_URL}/api/mechanics`,
-          {
-            method: "GET",
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.message || "Failed to fetch mechanics.");
-        }
-
-        setMechanics(data.mechanics || []);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchMechanics();
-  }, []);
-
-  const filteredMechanics = useMemo(() => {
-    return mechanics.filter((mechanic) => {
-      const searchText = search.toLowerCase();
-
-      const matchesSearch =
-        mechanic.businessName?.toLowerCase().includes(searchText) ||
-        mechanic.user?.fullName?.toLowerCase().includes(searchText) ||
-        mechanic.services?.some((service) =>
-          service.toLowerCase().includes(searchText)
-        ) ||
-        mechanic.location?.address?.toLowerCase().includes(searchText);
-
-      const matchesFilter =
-        activeFilter === "All Services" ||
-        mechanic.services?.some((service) => {
-          if (activeFilter === "Tyre Repair") {
-            return service === "Tyre Repair";
-          }
-
-          if (activeFilter === "Battery") {
-            return service === "Battery Jumpstart";
-          }
-
-          if (activeFilter === "Towing") {
-            return service === "Towing";
-          }
-
-          return true;
+        const data = await getMechanics({
+          search,
+          service: activeFilter,
+          availableOnly: showAvailableOnly,
+          signal: controller.signal,
         });
+        if (controller.signal.aborted) return;
 
-      const matchesAvailability =
-        !showAvailableOnly || mechanic.isAvailable;
+        const results = data.mechanics || [];
+        setMechanics(results);
+        setAvailableCount(
+          Number.isFinite(data.availableCount) ? data.availableCount : 0
+        );
+        setSelectedId((currentId) =>
+          results.some((mechanic) => mechanic._id === currentId)
+            ? currentId
+            : results[0]?._id || null
+        );
+      } catch (requestError) {
+        if (!controller.signal.aborted) setError(requestError.message);
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
+      }
+    }, 250);
 
-      return matchesSearch && matchesFilter && matchesAvailability;
-    });
-  }, [mechanics, search, activeFilter, showAvailableOnly]);
+    return () => {
+      clearTimeout(timeoutId);
+      controller.abort();
+    };
+  }, [search, activeFilter, showAvailableOnly]);
+
+  const filteredMechanics = mechanics;
 
   const selectedMechanic =
     filteredMechanics.find((mechanic) => mechanic._id === selectedId) ||
@@ -146,7 +112,7 @@ function FindMechanic() {
           <div className="find-toolbar-actions">
             <span className="available-summary">
               <span className="online-dot" />
-              {mechanics.filter((m) => m.isAvailable).length}
+              {availableCount}
               {" "}Available Now
             </span>
 
@@ -306,7 +272,7 @@ function FindMechanic() {
               {!loading && !error && filteredMechanics.length === 0 && (
                 <div className="no-mechanics">
                   <Search size={28} />
-                  <h3>No mechanics found</h3>
+                  <h3>No results found</h3>
                   <p>Try another service or search term.</p>
 
                   <button

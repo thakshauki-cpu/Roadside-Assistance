@@ -18,8 +18,12 @@ function AdminSidebar({ activeItem }) {
   const navigate = useNavigate();
 
   const handleSignOut = () => {
+    localStorage.removeItem("adminToken");
+    localStorage.removeItem("adminUser");
+    sessionStorage.removeItem("adminToken");
+    sessionStorage.removeItem("adminUser");
     localStorage.removeItem("adminLoggedIn");
-    navigate("/admin/login");
+    navigate("/login", { replace: true });
   };
 
   return (

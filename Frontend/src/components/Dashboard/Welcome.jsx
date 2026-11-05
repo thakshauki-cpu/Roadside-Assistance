@@ -504,10 +504,7 @@ function WelcomeSection() {
           <div className="road-advice">
             <span>Need road advice?</span>
 
-            <button type="button">
-              Ask RoadMate AI
-              <Sparkles size={12} />
-            </button>
+           
           </div>
         </section>
 

@@ -16,7 +16,6 @@ import {
 import AdminLayout from "../../Admin/AdminLayout";
 
 import {
-  customerReviews,
   getInitials,
 } from "../../Admin/adminSampleData";
 
@@ -25,6 +24,7 @@ import {
   getAdminMechanics,
   approveAdminMechanic,
   rejectAdminMechanic,
+  getAdminReviews,
 } from "../../../api/admin";
 
 function AdminDashboard() {
@@ -34,6 +34,9 @@ function AdminDashboard() {
   const [dashboard, setDashboard] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [reviewData, setReviewData] = useState(null);
+  const [reviewLoading, setReviewLoading] = useState(true);
+  const [reviewError, setReviewError] = useState("");
 
   // Request filter
   const [activeTab, setActiveTab] = useState("all");
@@ -81,6 +84,24 @@ function AdminDashboard() {
 
   useEffect(() => {
     loadMechanicQueue();
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    getAdminReviews()
+      .then((data) => {
+        if (active) setReviewData(data);
+      })
+      .catch((err) => {
+        if (active) setReviewError(err.message);
+      })
+      .finally(() => {
+        if (active) setReviewLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   // Dashboard data
@@ -501,37 +522,43 @@ function AdminDashboard() {
           )}
         </section>
 
-        {/* Customer Reviews - Sample Data for now */}
+        {/* Customer reviews from MongoDB */}
         <section className="adm-card adm-section">
           <div className="adm-section-head">
             <h2>
               <Star size={18} />
               Customer Reviews
             </h2>
-
-           
+            {!reviewLoading && !reviewError && (
+              <span className="adm-badge grey">
+                {reviewData?.stats?.averageRating ?? 0} ★ · {reviewData?.stats?.totalReviews ?? 0} reviews
+              </span>
+            )}
           </div>
 
-          {customerReviews.map((review) => (
+          {reviewLoading ? (
+            <p>Loading customer reviews...</p>
+          ) : reviewError ? (
+            <p className="adm-error">{reviewError}</p>
+          ) : reviewData?.reviews?.length ? reviewData.reviews.slice(0, 3).map((review) => (
             <div
-              key={review.id}
+              key={review._id}
               className="adm-review-box"
             >
               <div className="adm-review-top">
-                <strong>{review.mechanic}</strong>
-
+                <strong>{review.mechanicId?.fullName || "Mechanic"}</strong>
                 <span className="adm-stars">
-                  {"★".repeat(review.stars)}
+                  {"★".repeat(review.rating)}
                 </span>
               </div>
 
-              <p>"{review.text}"</p>
-
+              <p>"{review.comment}"</p>
               <small>
-                — {review.by} <span>{review.time}</span>
+                <span>{review.customerId?.fullName || "Customer"} · {review.serviceRequestId?.problem || "Service request"}</span>
+                <time dateTime={review.createdAt}>{new Date(review.createdAt).toLocaleDateString()}</time>
               </small>
             </div>
-          ))}
+          )) : <p>No customer reviews have been submitted yet.</p>}
         </section>
 
       </div>

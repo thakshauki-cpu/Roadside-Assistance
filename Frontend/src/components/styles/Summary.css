@@ -775,3 +775,27 @@
     justify-content: center;
   }
 }
+
+.done-review-submit {
+  width: 100%;
+  justify-content: center;
+  margin-top: 12px;
+}
+
+.done-review-success {
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #e8f7ef;
+  color: #087a4d;
+  font-size: 13px;
+}
+
+.done-star-row button:disabled {
+  cursor: default;
+}
+
+.done-textarea:disabled {
+  opacity: 0.8;
+  cursor: not-allowed;
+}

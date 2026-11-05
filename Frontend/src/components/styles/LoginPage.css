@@ -88,7 +88,7 @@
 
 .login-role-switch {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 4px;
   margin-top: 47px;
   padding: 4px;
@@ -111,6 +111,7 @@
   font-size: 12px;
   font-weight: 600;
   transition: background 0.2s, color 0.2s;
+  cursor: pointer;
 }
 
 .role-button.selected {
