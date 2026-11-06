@@ -57,7 +57,7 @@
   border-radius: 6px;
   background: #f0f2ff;
   color: #59647b;
-  font-size: 9px;
+  font-size: 11px;
   white-space: nowrap;
 }
 
@@ -82,7 +82,7 @@
   border-radius: 8px;
   text-decoration: none;
   color: #50596c;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
   transition: 0.2s;
 }
@@ -107,7 +107,7 @@
   border-radius: 50%;
   background: #ffe0c0;
   color: #a65b12;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .mech-menu-dot {
@@ -142,14 +142,14 @@
 
 .mech-duty-row small {
   color: #414b5e;
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 700;
 }
 
 .mech-duty-row button {
   border: none;
   background: none;
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 700;
   cursor: pointer;
 }
@@ -166,7 +166,7 @@
   display: block;
   margin-top: 5px;
   color: #747c8d;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .mech-duty-row button:disabled {
@@ -189,7 +189,7 @@
   border: none;
   background: transparent;
   color: #ed3434;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
 }
@@ -232,7 +232,7 @@
   outline: none;
   background: transparent;
   color: #202a3c;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .mech-pill {
@@ -244,7 +244,7 @@
   border-radius: 20px;
   background: #f0f1fa;
   color: #424d64;
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 600;
   white-space: nowrap;
 }
@@ -287,7 +287,7 @@
   border-radius: 50%;
   background: #df2929;
   color: #ffffff;
-  font-size: 8px;
+  font-size: 10px;
 }
 
 .mech-user {
@@ -305,7 +305,7 @@
 
 .mech-user-text strong {
   color: #202a3c;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .mech-user-text small {
@@ -313,7 +313,7 @@
   align-items: center;
   gap: 3px;
   color: #0b9661;
-  font-size: 8px;
+  font-size: 10px;
 }
 
 .mech-avatar {
@@ -325,7 +325,7 @@
   border-radius: 50%;
   background: #dce6ff;
   color: #2459fa;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 700;
 }
 
@@ -344,7 +344,7 @@
 .mechanic-welcome h1 {
   margin: 0;
   color: #182238;
-  font-size: 23px;
+  font-size: 26px;
   line-height: 1.25;
   font-weight: 800;
   text-align: left;
@@ -353,7 +353,7 @@
 .mechanic-welcome p {
   margin: 6px 0 0;
   color: #5b6375;
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.5;
   text-align: left;
 }
@@ -384,7 +384,7 @@
   justify-content: space-between;
   gap: 4px;
   color: #465065;
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 700;
 }
 
@@ -410,19 +410,19 @@
 .mechanic-stat-card h2 {
   margin: 9px 0 5px;
   color: #182238;
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 800;
 }
 
 .mechanic-stat-card h2 small {
   color: #596277;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 600;
 }
 
 .stat-positive {
   color: #079b68;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
 }
 
@@ -438,11 +438,11 @@
   gap: 3px;
   margin-top: 8px;
   color: #677185;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .stat-bottom .stat-positive {
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .target-progress {
@@ -464,7 +464,7 @@
 .stat-description {
   margin-top: 7px;
   color: #677185;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .active-job-card {
@@ -485,7 +485,7 @@
   gap: 4px;
   margin: 5px 0;
   color: #68420d;
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 600;
 }
 
@@ -502,7 +502,7 @@
   gap: 3px;
   margin-top: 9px;
   color: #865000;
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 600;
 }
 
@@ -537,18 +537,18 @@
 .dashboard-requests-heading h3 {
   margin: 0;
   color: #182238;
-  font-size: 16px;
+  font-size: 18px;
 }
 
 .dashboard-requests-heading p {
   margin: 5px 0 0;
   color: #747c8d;
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .dashboard-requests-heading a {
   color: #2459fa;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
   text-decoration: none;
   white-space: nowrap;
@@ -559,7 +559,7 @@
   margin: 0;
   padding: 15px 10px;
   color: #747c8d;
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .dashboard-requests-error {
@@ -572,7 +572,7 @@
   border-radius: 7px;
   background: #eefaf4;
   color: #087b58;
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .dashboard-request-feedback.error {
@@ -615,7 +615,7 @@
   flex-wrap: wrap;
   justify-content: space-between;
   gap: 10px;
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .dashboard-request-status {
@@ -623,18 +623,18 @@
   border-radius: 12px;
   background: #fff0d7;
   color: #a95a00;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
 }
 
 .dashboard-request-card-heading time {
   color: #747c8d;
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .dashboard-request-card p {
   margin: 7px 0 0;
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .dashboard-request-location {
@@ -643,7 +643,7 @@
   gap: 5px;
   margin-top: 8px;
   color: #667187;
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .dashboard-request-actions {
@@ -658,7 +658,7 @@
   border: 1px solid transparent;
   border-radius: 7px;
   font-family: inherit;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 700;
   cursor: pointer;
   transition: background-color 0.2s, border-color 0.2s, opacity 0.2s;
@@ -724,13 +724,13 @@
 .urgent-title h3 {
   margin: 0;
   color: #182238;
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .urgent-title p {
   margin: 3px 0 0;
   color: #6b7280;
-  font-size: 8px;
+  font-size: 10px;
 }
 
 .priority-label {
@@ -739,7 +739,7 @@
   border-radius: 20px;
   background: #ffe0b9;
   color: #744600;
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 700;
   white-space: nowrap;
 }
@@ -749,13 +749,13 @@
   border-radius: 20px;
   background: #e6eaff;
   color: #17233d;
-  font-size: 11px;
+  font-size: 13px;
   white-space: nowrap;
 }
 
 .dispatch-fee small {
   color: #677185;
-  font-size: 7px;
+  font-size: 9px;
   font-weight: 400;
 }
 
@@ -782,7 +782,7 @@
   display: block;
   margin-bottom: 7px;
   color: #465065;
-  font-size: 7px;
+  font-size: 9px;
   font-weight: 700;
 }
 
@@ -807,18 +807,18 @@
 .motorist-info h4 {
   margin: 0 0 3px;
   color: #182238;
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .motorist-info strong {
   color: #2055f5;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .motorist-details > p {
   margin: 7px 0 0;
   color: #364156;
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 600;
 }
 
@@ -828,7 +828,7 @@
   gap: 4px;
   margin: 0 0 6px;
   color: #e12d39;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .failure-details p {
@@ -837,7 +837,7 @@
   gap: 3px;
   margin: 5px 0;
   color: #465065;
-  font-size: 8px;
+  font-size: 10px;
 }
 
 .failure-details p svg {
@@ -880,7 +880,7 @@
   border-radius: 7px;
   text-decoration: none;
   font-family: inherit;
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 600;
   cursor: pointer;
 }
@@ -920,7 +920,7 @@
   align-items: center;
   gap: 5px;
   color: #ff4c54;
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 700;
 }
 
@@ -933,14 +933,14 @@
 
 .priority-support-card h3 {
   margin: 10px 0 7px;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
 }
 
 .support-description {
   margin: 0 0 12px;
   color: #b9c0cf;
-  font-size: 8px;
+  font-size: 10px;
   line-height: 1.5;
 }
 
@@ -965,7 +965,7 @@
   align-items: center;
   gap: 5px;
   color: #e4e8f0;
-  font-size: 8px;
+  font-size: 10px;
 }
 
 .support-contact div:first-child span svg,
@@ -979,7 +979,7 @@
 }
 
 .support-contact strong {
-  font-size: 8px;
+  font-size: 10px;
 }
 
 /* ==============================
@@ -1148,7 +1148,7 @@
   align-items: center;
   gap: 6px;
   color: #079b68;
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 700;
 }
 
@@ -1162,13 +1162,13 @@
 .mechanic-availability-card h3 {
   margin: 10px 0 7px;
   color: #182238;
-  font-size: 13px;
+  font-size: 15px;
 }
 
 .availability-description {
   margin: 0 0 12px;
   color: #747c8d;
-  font-size: 9px;
+  font-size: 11px;
   line-height: 1.5;
 }
 
@@ -1197,12 +1197,12 @@
 
 .availability-status strong {
   color: #16734e;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .availability-online-label {
   color: #079b68;
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 700;
 }
 
@@ -1217,7 +1217,7 @@
   display: flex;
   justify-content: space-between;
   gap: 5px;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .availability-info span {
@@ -1242,13 +1242,13 @@
 
 .status-online {
   color: #079b68;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
 }
 
 .status-offline {
   color: #e54848;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
 }
 
@@ -1283,7 +1283,7 @@
 .availability-note {
   margin-top: 10px;
   color: #747c8d;
-  font-size: 9px;
+  font-size: 11px;
   line-height: 1.5;
 }
 
@@ -1308,7 +1308,7 @@
   align-items: center;
   gap: 8px;
   margin: 0;
-  font-size: 17px;
+  font-size: 19px;
 }
 
 .mechanic-reviews-heading h2 svg {
@@ -1318,7 +1318,7 @@
 .mechanic-reviews-heading p {
   margin: 6px 0 0;
   color: #747c8d;
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .mechanic-review-stats {
@@ -1333,13 +1333,13 @@
   align-items: center;
   gap: 4px;
   color: #a66c00;
-  font-size: 17px;
+  font-size: 19px;
 }
 
 .mechanic-review-stats span,
 .mechanic-review-card small {
   color: #747c8d;
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .mechanic-review-list {
@@ -1356,7 +1356,7 @@
 
 .mechanic-review-top strong {
   color: #202a3c;
-  font-size: 13px;
+  font-size: 15px;
 }
 
 .mechanic-review-stars {
@@ -1367,7 +1367,7 @@
 .mechanic-review-card p {
   margin: 8px 0;
   color: #3b4766;
-  font-size: 13px;
+  font-size: 15px;
   line-height: 1.5;
 }
 
