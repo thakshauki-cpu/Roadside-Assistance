@@ -1,3 +1,4 @@
+
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
@@ -30,9 +31,7 @@ export const registerUser = async (req, res) => {
       businessName,
       experience,
       services,
-      address,
-      longitude,
-      latitude,
+      location,
     } = req.body;
 
     // Required fields
@@ -76,9 +75,9 @@ export const registerUser = async (req, res) => {
         experience === undefined ||
         !Array.isArray(services) ||
         services.length === 0 ||
-        !address?.trim() ||
-        longitude === undefined ||
-        latitude === undefined
+        !location?.address?.trim() ||
+        !Array.isArray(location?.coordinates) ||
+        location.coordinates.length !== 2
       ) {
         return res.status(400).json({
           message: "Please complete all mechanic registration details.",
@@ -105,22 +104,24 @@ export const registerUser = async (req, res) => {
       }
 
       const exp = Number(experience);
-      const lng = Number(longitude);
-      const lat = Number(latitude);
+      const longitude = Number(location.coordinates[0]);
+      const latitude = Number(location.coordinates[1]);
 
+      // Validate experience
       if (!Number.isFinite(exp) || exp < 0 || exp > 70) {
         return res.status(400).json({
           message: "Please enter valid years of experience.",
         });
       }
 
+      // Validate coordinates
       if (
-        !Number.isFinite(lng) ||
-        lng < -180 ||
-        lng > 180 ||
-        !Number.isFinite(lat) ||
-        lat < -90 ||
-        lat > 90
+        !Number.isFinite(longitude) ||
+        longitude < -180 ||
+        longitude > 180 ||
+        !Number.isFinite(latitude) ||
+        latitude < -90 ||
+        latitude > 90
       ) {
         return res.status(400).json({
           message: "Please enter valid location coordinates.",
@@ -146,13 +147,15 @@ export const registerUser = async (req, res) => {
           services,
           experience: Number(experience),
           phone: mobile.trim(),
+
           location: {
-            address: address.trim(),
+            address: location.address.trim(),
             coordinates: [
-              Number(longitude),
-              Number(latitude),
+              Number(location.coordinates[0]),
+              Number(location.coordinates[1]),
             ],
           },
+
           isAvailable: false,
           isVerified: false,
           verificationStatus: "pending",

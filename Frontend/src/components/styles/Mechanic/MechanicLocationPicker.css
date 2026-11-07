@@ -1,0 +1,99 @@
+.mechanic-location-picker {
+  width: 100%;
+  margin-top: 12px;
+}
+
+.mechanic-current-location-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 11px 16px;
+  border: none;
+  border-radius: 8px;
+  background: #176bce;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.mechanic-current-location-btn:hover {
+  background: #1055a8;
+}
+
+.mechanic-current-location-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.mechanic-map-instruction {
+  margin: 14px 0 10px;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.mechanic-location-map {
+  width: 100%;
+  height: 320px;
+  overflow: hidden;
+  border: 1px solid #dbe2ea;
+  border-radius: 10px;
+  z-index: 1;
+}
+
+.mechanic-location-map .leaflet-container {
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+.mechanic-selected-address {
+  margin-top: 16px;
+}
+
+.mechanic-selected-address label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 8px;
+  color: #263445;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.mechanic-selected-address textarea {
+  width: 100%;
+  min-height: 75px;
+  padding: 12px;
+  border: 1px solid #dbe2ea;
+  border-radius: 8px;
+  outline: none;
+  resize: vertical;
+  font-family: inherit;
+  font-size: 14px;
+}
+
+.mechanic-selected-address textarea:focus {
+  border-color: #176bce;
+}
+
+.mechanic-location-loading,
+.mechanic-location-error,
+.mechanic-location-success {
+  margin-top: 9px;
+  font-size: 13px;
+}
+
+.mechanic-location-loading {
+  color: #176bce;
+}
+
+.mechanic-location-error {
+  color: #dc2626;
+}
+
+.mechanic-location-success {
+  color: #15803d;
+}

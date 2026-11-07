@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -12,9 +13,9 @@ import {
   Eye,
   EyeOff,
   UserPlus,
-  CarFront,
 } from "lucide-react";
 
+import MechanicLocationPicker from "./MechanicLocationPicker";
 import { registerUser } from "../../../api/auth.js";
 
 import "../../styles/Mechanic/MechanicRegister.css";
@@ -38,9 +39,10 @@ function MechanicRegisterPage() {
     businessName: "",
     experience: "",
     services: [],
-    address: "",
-    longitude: "",
-    latitude: "",
+    location: {
+      address: "",
+      coordinates: [],
+    },
     password: "",
     confirmPassword: "",
   });
@@ -93,10 +95,15 @@ function MechanicRegisterPage() {
       return;
     }
 
-    const longitude = Number(formData.longitude);
-    const latitude = Number(formData.latitude);
+    // Validate workshop location
+    const coordinates = formData.location.coordinates;
+    const longitude = coordinates?.[0];
+    const latitude = coordinates?.[1];
 
     if (
+      !formData.location.address.trim() ||
+      !Array.isArray(coordinates) ||
+      coordinates.length !== 2 ||
       !Number.isFinite(longitude) ||
       longitude < -180 ||
       longitude > 180 ||
@@ -104,7 +111,7 @@ function MechanicRegisterPage() {
       latitude < -90 ||
       latitude > 90
     ) {
-      setError("Please enter valid longitude and latitude values.");
+      setError("Please select a valid workshop location on the map.");
       return;
     }
 
@@ -122,9 +129,10 @@ function MechanicRegisterPage() {
         experience: Number(formData.experience),
         services: formData.services,
 
-        address: formData.address.trim(),
-        longitude,
-        latitude,
+        location: {
+          address: formData.location.address.trim(),
+          coordinates: [longitude, latitude],
+        },
       });
 
       alert("Mechanic registration successful! Please login.");
@@ -141,11 +149,10 @@ function MechanicRegisterPage() {
       <header className="mechanic-register-header">
         <Link to="/" className="mechanic-register-brand">
           <img
-          src="/src/assets/logo.png"
-          alt="Roadmate"
-          className="logo"
-         
-        />
+            src="/src/assets/logo.png"
+            alt="Roadmate"
+            className="logo"
+          />
         </Link>
 
         <div className="mechanic-header-login">
@@ -293,63 +300,26 @@ function MechanicRegisterPage() {
               </div>
             </div>
 
-            {/* Location */}
+            {/* Workshop Location */}
             <div className="mechanic-form-section">
               <h3>
                 <MapPin size={19} />
-                Location Details
+                Workshop Location
               </h3>
 
-              <div className="mechanic-field">
-                <label>Workshop Address *</label>
-                <div className="mechanic-input-wrapper">
-                  <MapPin size={17} />
-                  <input
-                    type="text"
-                    name="address"
-                    placeholder="Enter your full address"
-                    value={formData.address}
-                    onChange={handleChange}
-                    required
-                  />
-                </div>
-              </div>
-
-              {/* <div className="mechanic-coordinate-grid">
-                <div className="mechanic-field">
-                  <label>Longitude *</label>
-                  <div className="mechanic-input-wrapper">
-                    <input
-                      type="number"
-                      step="any"
-                      name="longitude"
-                      placeholder="e.g. 80.2707"
-                      value={formData.longitude}
-                      onChange={handleChange}
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="mechanic-field">
-                  <label>Latitude *</label>
-                  <div className="mechanic-input-wrapper">
-                    <input
-                      type="number"
-                      step="any"
-                      name="latitude"
-                      placeholder="e.g. 13.0827"
-                      value={formData.latitude}
-                      onChange={handleChange}
-                      required
-                    />
-                  </div>
-                </div>
-              </div> */}
-
-              <p className="mechanic-location-note">
-                Enter your workshop's longitude and latitude coordinates.
+              <p className="mechanic-section-description">
+                Select your workshop location using GPS or the map.
               </p>
+
+              <MechanicLocationPicker
+                value={formData.location}
+                onChange={(location) =>
+                  setFormData((previous) => ({
+                    ...previous,
+                    location,
+                  }))
+                }
+              />
             </div>
 
             {/* Password */}
@@ -413,6 +383,7 @@ function MechanicRegisterPage() {
               </div>
             </div>
 
+            {/* Terms and Conditions */}
             <label className="mechanic-terms">
               <input
                 type="checkbox"
