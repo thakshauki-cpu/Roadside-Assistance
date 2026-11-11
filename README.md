@@ -175,6 +175,8 @@ ADMIN_JWT_SECRET=your_admin_jwt_secret
 ADMIN_JWT_EXPIRES_IN=1d
 ```
 
+If MongoDB SRV lookups fail because Node is using an unavailable DNS resolver, optionally set `MONGODB_DNS_SERVERS` to a working DNS server address. Use a comma-separated list for multiple servers; for example, `MONGODB_DNS_SERVERS=192.168.1.1`.
+
 Use your own secure credentials. Do not upload the `.env` file or expose database passwords and JWT secrets on GitHub.
 
 ## Future Enhancements
