@@ -39,7 +39,7 @@ function HeroSection() {
             Join as Mechanic
           </button>
         </div>
-
+{/* 
         <div className="hero-stats">
           <div className="stat-item">
             <div className="stat-icon">
@@ -70,7 +70,7 @@ function HeroSection() {
               <small>Local technicians</small>
             </div>
           </div>
-        </div>
+        </div> */}
       </div>
 
       <div className="hero-image-wrapper">
