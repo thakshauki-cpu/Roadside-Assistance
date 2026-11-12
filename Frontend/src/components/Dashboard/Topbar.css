@@ -92,7 +92,10 @@
   color: #7b8497;
   font-size: 11px;
 }
-
+.button{
+  background-color: #5c6578;
+  size: 5px;
+}
 @media (max-width: 600px) {
   .dashboard-topbar {
     padding: 12px;
