@@ -7,8 +7,11 @@ import {
   Star,
   ShieldCheck,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+
 
 function HeroSection() {
+  const navigate = useNavigate();
   return (
     <section className="hero-section" id="home">
       <div className="hero-content">
@@ -29,12 +32,12 @@ function HeroSection() {
         </p>
 
         <div className="hero-buttons">
-          <button className="get-help-btn">
+          <button className="get-help-btn" onClick={() => navigate("/login")}>
             <Send size={17} />
             Get Help
           </button>
 
-          <button className="join-mechanic-btn">
+          <button className="join-mechanic-btn" onClick={() => navigate("/register")}>
             <UsersRound size={17} />
             Join as Mechanic
           </button>

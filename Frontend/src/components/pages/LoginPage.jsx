@@ -1,8 +1,6 @@
-import { loginUser } from "../../api/auth.js";
+
 import { useState } from "react";
 import {
-  CarFront,
-  BriefcaseBusiness,
   Phone,
   LockKeyhole,
   Eye,
@@ -10,94 +8,175 @@ import {
   LogIn,
   Gauge,
   MapPin,
-  ShieldCheck,
 } from "lucide-react";
 
 import "../styles/LoginPage.css";
 import { Link, useNavigate } from "react-router-dom";
-import { adminLogin } from "../../api/admin.js";
+
+const API_URL = import.meta.env.VITE_API_URL;
 
 function LoginPage() {
   const navigate = useNavigate();
-  const [role, setRole] = useState("customer");
+
   const [showPassword, setShowPassword] = useState(false);
   const [rememberDevice, setRememberDevice] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const [error, setError] = useState("");     // error message to show
-  const [loading, setLoading] = useState(false); // true while waiting for backend
-
-
-
-  // const handleLogin = (event) => {
-  //   event.preventDefault();
-
-  //   if (!email.trim() || !password) {
-  //     alert("Please enter your email/phone number and password.");
-  //     return;
-  //   }
-
-  //   navigate("/dashboard");
-  // };
   const handleLogin = async (event) => {
     event.preventDefault();
     setError("");
 
     if (!email.trim() || !password) {
-      setError(`Please enter your ${role === "admin" ? "admin " : ""}email and password.`);
+      setError("Please enter your email and password.");
       return;
     }
 
+    setLoading(true);
+
     try {
-      setLoading(true);
+      const loginData = {
+        email: email.trim(),
+        password,
+      };
 
-      if (role === "admin") {
-        const data = await adminLogin({ email: email.trim(), password });
+      // 1. First check Admin login
+      const adminResponse = await fetch(`${API_URL}/api/admin/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(loginData),
+      });
 
+      const adminData = await adminResponse.json();
+
+      if (adminResponse.ok) {
+        // Admin login successful
         localStorage.removeItem("token");
         localStorage.removeItem("user");
+        sessionStorage.removeItem("token");
+        sessionStorage.removeItem("user");
+
+        localStorage.removeItem("adminToken");
+        localStorage.removeItem("adminUser");
         sessionStorage.removeItem("adminToken");
         sessionStorage.removeItem("adminUser");
+
         const storage = rememberDevice ? localStorage : sessionStorage;
-        storage.setItem("adminToken", data.token);
-        storage.setItem("adminUser", JSON.stringify(data.admin));
+
+        storage.setItem("adminToken", adminData.token);
+        storage.setItem("adminUser", JSON.stringify(adminData.admin));
+
         navigate("/admin/dashboard", { replace: true });
         return;
       }
 
-      const data = await loginUser({ email, password, role });
-
-      localStorage.removeItem("adminToken");
-      localStorage.removeItem("adminUser");
-      sessionStorage.removeItem("adminToken");
-      sessionStorage.removeItem("adminUser");
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("user", JSON.stringify(data.user));
-
-      if (data.user.role === "mechanic") {
-        navigate("/mechanic/dashboard");
-      } else {
-        navigate("/dashboard");
+      // If Admin credentials are invalid, check Customer / Mechanic.
+      // Other Admin errors (e.g. inactive account) should be shown.
+      if (adminResponse.status !== 401) {
+        throw new Error(adminData.message || "Admin login failed.");
       }
+
+      // 2. Check Customer login
+      const customerResponse = await fetch(`${API_URL}/api/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...loginData,
+          role: "customer",
+        }),
+      });
+
+      const customerData = await customerResponse.json();
+
+      if (customerResponse.ok) {
+        localStorage.removeItem("adminToken");
+        localStorage.removeItem("adminUser");
+        sessionStorage.removeItem("adminToken");
+        sessionStorage.removeItem("adminUser");
+
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        sessionStorage.removeItem("token");
+        sessionStorage.removeItem("user");
+
+        const storage = rememberDevice ? localStorage : sessionStorage;
+
+        storage.setItem("token", customerData.token);
+        storage.setItem("user", JSON.stringify(customerData.user));
+
+        navigate("/dashboard", { replace: true });
+        return;
+      }
+
+      // A 401 means customer credentials/role did not match.
+      // A 403 means the account is blocked or has another restriction.
+      if (customerResponse.status !== 401) {
+        throw new Error(
+          customerData.message || "Customer login failed."
+        );
+      }
+
+      // 3. Check Mechanic login
+      const mechanicResponse = await fetch(`${API_URL}/api/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...loginData,
+          role: "mechanic",
+        }),
+      });
+
+      const mechanicData = await mechanicResponse.json();
+
+      if (mechanicResponse.ok) {
+        localStorage.removeItem("adminToken");
+        localStorage.removeItem("adminUser");
+        sessionStorage.removeItem("adminToken");
+        sessionStorage.removeItem("adminUser");
+
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        sessionStorage.removeItem("token");
+        sessionStorage.removeItem("user");
+
+        const storage = rememberDevice ? localStorage : sessionStorage;
+
+        storage.setItem("token", mechanicData.token);
+        storage.setItem("user", JSON.stringify(mechanicData.user));
+
+        navigate("/mechanic/dashboard", { replace: true });
+        return;
+      }
+
+      throw new Error(
+        mechanicData.message || "Invalid email or password."
+      );
     } catch (err) {
-      setError(err.message);
+      setError(err.message || "Login failed. Please try again.");
     } finally {
       setLoading(false);
     }
   };
+
   return (
     <main className="login-page">
       <section className="login-card">
         <div className="login-top-border" />
 
         <div className="login-brand">
-            <img
-          src="/src/assets/logo.png"
-          alt="Roadmate"
-          className="logo"
-         
-        />
+          <img
+            src="/src/assets/logo.png"
+            alt="Roadmate"
+            className="logo"
+          />
         </div>
 
         <div className="login-heading">
@@ -109,52 +188,17 @@ function LoginPage() {
           </p>
         </div>
 
-        <div className="login-role-switch" role="group" aria-label="Choose account type">
-          <button
-            type="button"
-            className={`role-button ${role === "customer" ? "selected" : ""}`}
-            onClick={() => setRole("customer")}
-            aria-pressed={role === "customer"}
-          >
-            <CarFront size={14} />
-            Customer
-          </button>
-
-          <button
-            type="button"
-            className={`role-button ${role === "mechanic" ? "selected" : ""}`}
-            onClick={() => setRole("mechanic")}
-            aria-pressed={role === "mechanic"}
-          >
-            <BriefcaseBusiness size={14} />
-            Mechanic / Tow
-          </button>
-
-          <button
-            type="button"
-            className={`role-button ${role === "admin" ? "selected" : ""}`}
-            onClick={() => setRole("admin")}
-            aria-pressed={role === "admin"}
-          >
-            <ShieldCheck size={14} />
-            Admin
-          </button>
-        </div>
-
         <form className="login-form" onSubmit={handleLogin}>
           <div className="login-label-row">
-            <label htmlFor="login-identity">
-              {role === "admin" ? "Admin Email" : "Email"}
-            </label>
-          
+            <label htmlFor="login-identity">Email</label>
           </div>
 
           <div className="login-input-wrapper">
             <Phone size={16} />
             <input
               id="login-identity"
-              type="text"
-              placeholder={role === "admin" ? "admin@roadmate.lk" : "driver@roadmate.lk"}
+              type="email"
+              placeholder="Enter your email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               autoComplete="username"
@@ -165,7 +209,6 @@ function LoginPage() {
           <label className="password-label" htmlFor="login-password">
             Password
           </label>
-           
 
           <div className="login-input-wrapper password-input-wrapper">
             <LockKeyhole size={16} />
@@ -193,56 +236,38 @@ function LoginPage() {
               )}
             </button>
           </div>
-          
 
           <div className="login-options">
             <label className="remember-option">
               <input
                 type="checkbox"
                 checked={rememberDevice}
-                onChange={(event) => setRememberDevice(event.target.checked)}
+                onChange={(event) =>
+                  setRememberDevice(event.target.checked)
+                }
               />
               <span>Remember device</span>
             </label>
-
-            {/* <a href="#forgot-password" className="forgot-link">
-              Forgot password?
-            </a> */}
           </div>
 
-          
+          {error && <p className="form-error">{error}</p>}
 
-        {error && <p className="form-error">{error}</p>}
-
-<button type="submit" className="login-submit-button" disabled={loading}>
-  <LogIn size={16} />
-  {loading ? "Logging in..." : "Login"}
-</button>
-
-
-
-
+          <button
+            type="submit"
+            className="login-submit-button"
+            disabled={loading}
+          >
+            <LogIn size={16} />
+            {loading ? "Logging in..." : "Login"}
+          </button>
         </form>
 
         <div className="create-account-text">
-  {role === "admin" ? (
-    "Admin access is managed by RoadMate."
-  ) : (
-    <>
-      Don't have an account?{" "}
-      {role === "customer" ? (
-        <Link to="/register">Register as Customer</Link>
-      ) : (
-        <Link to="/mechanic-register">Register as Mechanic</Link>
-      )}
-    </>
-  )}
-</div>
-
-        {/* <p className="create-account-text">
-          New customer stranded on road?
-          <Link to="/register">Create account</Link>
-        </p> */}
+          Don't have an account?{" "}
+          <Link to="/register">Register as Customer</Link>
+          {" or "}
+          <Link to="/mechanic-register">Register as Mechanic</Link>
+        </div>
 
         <div className="emergency-card">
           <div className="emergency-icon">
