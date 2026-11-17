@@ -242,7 +242,7 @@ function MechanicFound() {
               </section>
 
               <section className="gethelp-card">
-                <h4 className="specialty-title">AVAILABLE MOCK MECHANICS</h4>
+                <h4 className="specialty-title">AVAILABLE  MECHANICS</h4>
                 <div className="specialty-grid">
                   {nearbyMechanics.map((item) => (
                     <div className="specialty-item" key={item.id}>

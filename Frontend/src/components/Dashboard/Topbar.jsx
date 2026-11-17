@@ -6,7 +6,6 @@ function DashboardTopbar() {
 const user = JSON.parse(localStorage.getItem("user"));
 const navigate = useNavigate();
 
-
   return (
     <header className="dashboard-topbar">
       <div className="topbar-search">
