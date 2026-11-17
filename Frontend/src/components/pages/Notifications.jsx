@@ -17,13 +17,18 @@ import {
   Navigation,
   FileText,
   Eye,
-  ChevronDown,
   X,
 } from "lucide-react";
 
 import DashboardSidebar from "../Dashboard/Sidebar";
 import DashboardTopbar from "../Dashboard/Topbar";
-import { getNotifications } from "../../api/notifications";
+
+import {
+  getNotifications,
+  markNotificationAsRead as saveNotificationAsRead,
+  markAllNotificationsAsRead as saveAllNotificationsAsRead,
+} from "../../api/notifications";
+
 import "../styles/Notifications.css";
 
 const notificationIcons = {
@@ -52,61 +57,59 @@ function Notifications() {
     reminders: true,
   });
 
-  // Fetch notifications from backend
+  // Fetch notifications from backend.
+  const fetchNotifications = async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      const data = await getNotifications();
+
+      const formattedNotifications = data.notifications.map(
+        (notification) => ({
+          id: notification._id,
+
+          type:
+            notification.type === "assigned"
+              ? "request"
+              : notification.type === "on_the_way"
+              ? "onway"
+              : notification.type,
+
+          title: notification.title,
+          description: notification.message,
+
+          time: notification.createdAt
+            ? new Date(notification.createdAt).toLocaleString()
+            : "Recently",
+
+          location: "",
+          status: "",
+          unread: !notification.isRead,
+
+          actions: [],
+        })
+      );
+
+      setNotifications(formattedNotifications);
+    } catch (err) {
+      console.error("Notification fetching error:", err);
+      setError(err.message || "Unable to load notifications.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchNotifications = async () => {
-      try {
-        setLoading(true);
-        setError("");
-
-        const data = await getNotifications();
-
-        const formattedNotifications = data.notifications.map(
-          (notification) => ({
-            id: notification._id,
-
-            // Convert backend notification types to frontend types
-            type:
-              notification.type === "assigned"
-                ? "request"
-                : notification.type === "on_the_way"
-                ? "onway"
-                : notification.type,
-
-            title: notification.title,
-            description: notification.message,
-
-            time: notification.createdAt
-              ? new Date(notification.createdAt).toLocaleString()
-              : "Recently",
-
-            location: "",
-            status: "",
-            unread: !notification.isRead,
-
-            // Current backend mock data does not provide actions
-            actions: [],
-          })
-        );
-
-        setNotifications(formattedNotifications);
-      } catch (err) {
-        console.error("Notification fetching error:", err);
-        setError(err.message || "Unable to load notifications.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchNotifications();
   }, []);
 
-  // Count unread notifications
+  // Count unread notifications.
   const unreadCount = notifications.filter(
     (notification) => notification.unread
   ).length;
 
-  // Filter notifications
+  // Filter notifications.
   const filteredNotifications = useMemo(() => {
     return notifications.filter((notification) => {
       const matchesTab =
@@ -125,28 +128,42 @@ function Notifications() {
     });
   }, [notifications, activeTab, search]);
 
-  // Mark all notifications as read
-  const markAllAsRead = () => {
-    setNotifications((previous) =>
-      previous.map((notification) => ({
-        ...notification,
-        unread: false,
-      }))
-    );
+  // Mark all notifications as read in MongoDB.
+  const markAllAsRead = async () => {
+    try {
+      await saveAllNotificationsAsRead();
+
+      setNotifications((previous) =>
+        previous.map((notification) => ({
+          ...notification,
+          unread: false,
+        }))
+      );
+    } catch (err) {
+      console.error("Mark all as read error:", err);
+      alert(err.message || "Unable to update notifications.");
+    }
   };
 
-  // Mark one notification as read
-  const markAsRead = (id) => {
-    setNotifications((previous) =>
-      previous.map((notification) =>
-        notification.id === id
-          ? { ...notification, unread: false }
-          : notification
-      )
-    );
+  // Mark one notification as read in MongoDB.
+  const markAsRead = async (id) => {
+    try {
+      await saveNotificationAsRead(id);
+
+      setNotifications((previous) =>
+        previous.map((notification) =>
+          notification.id === id
+            ? { ...notification, unread: false }
+            : notification
+        )
+      );
+    } catch (err) {
+      console.error("Mark as read error:", err);
+      alert(err.message || "Unable to update notification.");
+    }
   };
 
-  // Handle notification actions
+  // Handle notification actions.
   const handleAction = (notification, action) => {
     markAsRead(notification.id);
 
@@ -176,18 +193,12 @@ function Notifications() {
 
       "Rate Service":
         "The mechanic review form will be connected here.",
-
-      "Report #RM-8924 generated":
-        "Service report reference: RM-8924.",
-
-      "UPI/5129482103":
-        "UPI transaction reference: 5129482103.",
     };
 
     alert(messages[action] || `${action} selected.`);
   };
 
-  // Button styles
+  // Button styles.
   const getActionClass = (action) => {
     if (action === "Decline Quote") {
       return "notification-btn danger";
@@ -223,8 +234,8 @@ function Notifications() {
           </div>
 
           <p>
-            Stay updated on your roadside assistance requests, mechanic
-            status, and payment receipts.
+            Stay updated on your roadside assistance requests,
+            mechanic status, and payment receipts.
           </p>
 
           <div className="heading-actions">
@@ -289,10 +300,7 @@ function Notifications() {
 
             {/* Notification List */}
             <div className="notification-list">
-
-              {loading && (
-                <p>Loading notifications...</p>
-              )}
+              {loading && <p>Loading notifications...</p>}
 
               {error && (
                 <div className="notification-empty">
@@ -379,14 +387,6 @@ function Notifications() {
 
                                 {action === "Rate Service" && (
                                   <Star size={12} />
-                                )}
-
-                                {action === "Report #RM-8924 generated" && (
-                                  <FileText size={12} />
-                                )}
-
-                                {action === "UPI/5129482103" && (
-                                  <ReceiptText size={12} />
                                 )}
 
                                 {action}
