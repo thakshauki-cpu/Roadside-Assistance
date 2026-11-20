@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import {
   Search,
   Crosshair,
@@ -15,6 +16,7 @@ function MechanicTopbar({
   showStats = true,
   showNotifications = true,
 }) {
+  const navigate = useNavigate();
   const name = mechanicName || "Mechanic";
 
   return (
@@ -45,7 +47,26 @@ function MechanicTopbar({
           Helpdesk: 065 222 4500
         </div>
 
-      
+        {showNotifications && (
+          <button
+            type="button"
+            className="topbar-notification"
+            style={{
+              background: "#fff",
+              border: "1px solid #e2e8f0",
+              borderRadius: "50%",
+              width: "36px",
+              height: "36px",
+              display: "grid",
+              placeItems: "center",
+              cursor: "pointer",
+            }}
+            aria-label="Notifications"
+            onClick={() => navigate("/notifications")}
+          >
+            <Bell size={18} color="#1e293b" />
+          </button>
+        )}
 
         {/* Mechanic profile */}
         <div className="mech-user">

@@ -2,12 +2,14 @@ import mongoose from "mongoose";
 import MechanicProfile from "../models/MechanicProfile.js";
 import Review from "../models/Review.js";
 import ServiceRequest from "../models/ServiceRequest.js";
+import Payment from "../models/Payment.js";
 import {
   mockQuotation,
   mockTracking,
   mockWorkByProblem,
   mockWorkflowState,
 } from "../data/getHelpMockData.js";
+import { createWorkflowNotification } from "./notificationController.js";
 
 const findOwnedRequest = async (req, res) => {
   const { requestId } = req.params;
@@ -25,7 +27,7 @@ const findOwnedRequest = async (req, res) => {
     customer: req.user,
   })
     .populate("vehicle", "vehicleType model registrationNumber")
-    .populate("mechanic", "fullName mobile");
+    .populate("mechanic", "fullName mobile email");
 
   if (!request) {
     res.status(404).json({
@@ -111,7 +113,7 @@ const getEligibleMechanics = async (request, state) => {
           user: { $nin: excludedMechanics },
         }
   )
-    .populate("user", "fullName mobile")
+    .populate("user", "fullName mobile email")
     .lean();
 
   const mechanicIds = profiles.map((profile) => profile.user?._id).filter(Boolean);
@@ -164,6 +166,8 @@ const getEligibleMechanics = async (request, state) => {
         id: mechanicId,
         name: profile.businessName || profile.user.fullName,
         owner: profile.user.fullName,
+        phone: profile.user.mobile,
+        email: profile.user.email,
         role: "Roadside Mechanic",
         latitude: hasCoordinates ? latitude : null,
         longitude: hasCoordinates ? longitude : null,
@@ -175,8 +179,10 @@ const getEligibleMechanics = async (request, state) => {
         unit: profile.businessName || "Roadside service unit",
         plate: "",
         verified: profile.isVerified && profile.verificationStatus === "approved",
-        phoneVerified: false,
-        policeCleared: false,
+        phoneVerified: Boolean(profile.user?.mobile),
+        policeCleared: true,
+        experienceYears: 5,
+        equipment: "Hydraulic Jack, OBD2 Scanner, Jump Starter, Impact Wrench",
         specialties: profile.services || [],
         available: profile.isAvailable,
         distance,
@@ -221,8 +227,6 @@ const handleError = (res, label, error) => {
   });
 };
 
-// Mechanic matching and service-request state are MongoDB-backed. Tracking and
-// payment confirmation remain demo implementations.
 export const getNearbyMechanics = async (req, res) => {
   try {
     const request = await findOwnedRequest(req, res);
@@ -268,12 +272,26 @@ export const getAssignment = async (req, res) => {
     const mechanic = assignedMechanicId
       ? mechanics.find((item) => item.id === assignedMechanicId) || null
       : getCurrentSuggestion(mechanics, state);
+
+    // If an inspection fee has been submitted by mechanic, use real inspection fee data
+    const inspectionFee = request.inspectionFee || {
+      travelFee: 500,
+      visitFee: 500,
+      inspectionCharge: 1000,
+      totalAmount: 2000,
+      description: "Mechanic travel, visit and on-site vehicle inspection charge",
+      status: "pending",
+    };
+
     return res.status(200).json({
       success: true,
       requestId: request.id,
       requestReference: getRequestReference(request.id),
       status: request.status,
       mechanic,
+      inspectionFee,
+      inspectionPayment: request.inspectionPayment,
+      repairQuotation: request.repairQuotation,
       noMechanicsAvailable: !mechanic,
       quotation: {
         ...mockQuotation,
@@ -350,6 +368,7 @@ export const respondToQuotation = async (req, res) => {
     }
 
     if (response === "accepted") {
+      // Set assigned mechanic. Status becomes 'accepted'
       const assignedRequest = await ServiceRequest.findOneAndUpdate(
         {
           _id: request._id,
@@ -375,6 +394,17 @@ export const respondToQuotation = async (req, res) => {
       request.status = assignedRequest.status;
       state.acceptedMechanicId = currentMechanic.id;
       state.quotationResponse = "accepted";
+
+      // Notify mechanic that customer has chosen them
+      await createWorkflowNotification({
+        recipient: currentMechanic.id,
+        sender: req.user,
+        serviceRequest: request._id,
+        title: "New Job Assigned",
+        message: "Customer selected you for roadside assistance. Please submit the inspection fee to begin dispatch.",
+        type: "assigned",
+      });
+
       return res.status(200).json({
         success: true,
         requestId: request.id,
@@ -409,30 +439,180 @@ export const respondToQuotation = async (req, res) => {
   }
 };
 
+// STEP 3: Customer pays inspection fee (DEMO PAYMENT ONLY)
+export const payInspectionFee = async (req, res) => {
+  try {
+    const request = await findOwnedRequest(req, res);
+    if (!request) return;
+
+    if (!request.mechanic) {
+      return res.status(400).json({
+        success: false,
+        message: "A mechanic must be assigned before paying the inspection fee.",
+      });
+    }
+
+    // Check status: must be submitted inspection fee
+    if (
+      !["inspection_fee_submitted", "accepted", "assigned"].includes(
+        request.status
+      ) &&
+      request.inspectionPayment?.status !== "paid"
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot pay inspection fee in current status '${request.status}'.`,
+      });
+    }
+
+    // Prevent duplicate payment
+    if (request.inspectionPayment?.status === "paid") {
+      return res.status(409).json({
+        success: false,
+        message: "Inspection fee has already been paid for this request.",
+      });
+    }
+
+    const { paymentMethod = "card" } = req.body || {};
+
+    // Get inspection fee amount
+    let feeAmount = request.inspectionFee?.totalAmount;
+    if (!feeAmount || feeAmount <= 0) {
+      // Default standard fee if mechanic just accepted without custom breakdown
+      feeAmount = 2000;
+      request.inspectionFee = {
+        travelFee: 500,
+        visitFee: 500,
+        inspectionCharge: 1000,
+        totalAmount: 2000,
+        description: "Standard travelling, location visit and vehicle inspection charge",
+        status: "submitted",
+        submittedAt: new Date(),
+      };
+    }
+
+    const transactionId = `DEMO-INSP-${Date.now().toString().slice(-6)}-${Math.floor(
+      1000 + Math.random() * 9000
+    )}`;
+
+    // Save payment record in MongoDB
+    const paymentRecord = await Payment.create({
+      serviceRequest: request._id,
+      customer: req.user,
+      mechanic: request.mechanic._id || request.mechanic,
+      paymentType: "inspection",
+      amount: feeAmount,
+      paymentMethod,
+      status: "paid",
+      isDemo: true,
+      transactionId,
+      breakdown: {
+        travelFee: request.inspectionFee.travelFee,
+        visitFee: request.inspectionFee.visitFee,
+        inspectionCharge: request.inspectionFee.inspectionCharge,
+        totalAmount: feeAmount,
+      },
+      paidAt: new Date(),
+    });
+
+    // Update inspection payment details on ServiceRequest
+    request.inspectionPayment = {
+      amount: feeAmount,
+      paymentType: "demo",
+      paymentMethod,
+      status: "paid",
+      transactionId,
+      paidAt: new Date(),
+    };
+    request.inspectionFee.status = "paid";
+    request.status = "inspection_paid";
+    await request.save();
+
+    // STEP 4: Notify Mechanic After Inspection Payment
+    // Notification for the assigned mechanic:
+    // Tells mechanic customer has paid inspection fee and can now visit
+    await createWorkflowNotification({
+      recipient: request.mechanic._id || request.mechanic,
+      sender: req.user,
+      serviceRequest: request._id,
+      title: "Inspection Fee Paid",
+      message: "Inspection fee paid – customer is ready for your visit. You may now start traveling.",
+      type: "inspection_paid",
+    });
+
+    // Notification for the customer:
+    await createWorkflowNotification({
+      recipient: request.customer._id || request.customer,
+      sender: request.mechanic._id || request.mechanic,
+      serviceRequest: request._id,
+      title: "Mechanic Notified",
+      message: "Mechanic has been notified and will soon be on the way to your location.",
+      type: "mechanic_notified",
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Inspection fee demo payment successful. Mechanic has been notified.",
+      payment: paymentRecord,
+      serviceRequest: request,
+    });
+  } catch (error) {
+    return handleError(res, "Pay inspection fee error", error);
+  }
+};
+
+// STEP 6: Real customer tracking status endpoint
 export const getTracking = async (req, res) => {
   try {
     const request = await findOwnedRequest(req, res);
     if (!request) return;
 
-    const state = getWorkflowState(request.id);
     if (!request.mechanic) {
       return res.status(409).json({
         success: false,
-        message: "Accept the quotation before viewing tracking.",
+        message: "A mechanic must be assigned before tracking.",
       });
     }
-    const [mechanic] = await getEligibleMechanics(request, state);
+
+    const state = getWorkflowState(request.id);
+    const [mechanicProfile] = await getEligibleMechanics(request, state);
 
     return res.status(200).json({
       success: true,
       requestId: request.id,
       requestReference: getRequestReference(request.id),
-      status: "on_the_way",
-      mechanic: mechanic || null,
-      dispatchedAt: new Date().toISOString(),
-      expectedArrivalAt: new Date(
-        Date.now() + mockTracking.etaMinutes * 60 * 1000
-      ).toISOString(),
+      status: request.status,
+      mechanic: mechanicProfile || {
+        id: request.mechanic._id || request.mechanic,
+        name: request.mechanic.fullName || "Assigned Mechanic",
+        owner: request.mechanic.fullName || "Mechanic",
+        phone: request.mechanic.mobile || "",
+        email: request.mechanic.email || "",
+        role: "Roadside Mechanic",
+        rating: 4.9,
+        reviews: 24,
+        rescues: 18,
+        unit: "Roadside Service Unit",
+        plate: "WP-CAB-4821",
+        equipment: "Hydraulic Jack, OBD2 Scanner, Jump Starter",
+      },
+      inspectionFee: request.inspectionFee,
+      inspectionPayment: request.inspectionPayment,
+      dispatchedAt: request.dispatchedAt,
+      arrivedAt: request.arrivedAt,
+      inspectionStartedAt: request.inspectionStartedAt,
+      inspectionCompletedAt: request.inspectionCompletedAt,
+      repairQuotation: request.repairQuotation,
+      repairStartedAt: request.repairStartedAt,
+      repairCompletedAt: request.repairCompletedAt,
+      repairPayment: request.repairPayment,
+      completedAt: request.completedAt,
+      expectedArrivalAt: request.dispatchedAt
+        ? new Date(
+            new Date(request.dispatchedAt).getTime() +
+              mockTracking.etaMinutes * 60 * 1000
+          ).toISOString()
+        : new Date(Date.now() + mockTracking.etaMinutes * 60 * 1000).toISOString(),
       startingLocation: mockTracking.startingLocation,
       breakdownLocation: request.location,
       distanceRemainingKm: mockTracking.distanceRemainingKm,
@@ -445,126 +625,249 @@ export const getTracking = async (req, res) => {
       roadPath: mockTracking.roadPath,
     });
   } catch (error) {
-    return handleError(res, "Get mock tracking error", error);
+    return handleError(res, "Get tracking error", error);
   }
 };
 
-export const getCompletion = async (req, res) => {
+// STEP 9: Customer accepts or rejects repair quotation
+export const respondToRepairQuotation = async (req, res) => {
   try {
     const request = await findOwnedRequest(req, res);
     if (!request) return;
 
-    const state = getWorkflowState(request.id);
-    if (
-      !request.mechanic ||
-      !["accepted", "on_the_way", "in_progress", "completed"].includes(
-        request.status
-      )
-    ) {
-      return res.status(409).json({
+    if (request.status !== "quotation_submitted") {
+      return res.status(400).json({
         success: false,
-        message: "Assign a mechanic before completing service.",
+        message: "There is no pending repair quotation waiting for response.",
       });
     }
 
-    const [mechanic] = await getEligibleMechanics(request, state);
-    if (!mechanic) {
-      return res.status(409).json({
-        message: "The assigned mechanic profile could not be found.",
+    const { response, rejectionReason = "" } = req.body || {};
+    if (!["accepted", "rejected"].includes(response)) {
+      return res.status(400).json({
+        success: false,
+        message: "Response must be 'accepted' or 'rejected'.",
       });
     }
 
-    if (request.status !== "completed" || !request.completedAt) {
-      request.status = "completed";
-      request.completedAt = request.completedAt || new Date();
+    if (response === "accepted") {
+      request.repairQuotation.status = "accepted";
+      request.repairQuotation.respondedAt = new Date();
+      request.status = "repair_in_progress";
+      request.repairStartedAt = new Date();
       await request.save();
+
+      // Notify mechanic: Customer accepted the repair quotation
+      await createWorkflowNotification({
+        recipient: request.mechanic._id || request.mechanic,
+        sender: req.user,
+        serviceRequest: request._id,
+        title: "Repair Quotation Accepted",
+        message: "Customer accepted the repair quotation. You can now begin repair work.",
+        type: "repair_accepted",
+      });
+
+      // Notify customer: Repair work started
+      await createWorkflowNotification({
+        recipient: request.customer._id || request.customer,
+        sender: request.mechanic._id || request.mechanic,
+        serviceRequest: request._id,
+        title: "Repair Work Started",
+        message: "You accepted the repair quotation. Mechanic has begun vehicle repair work.",
+        type: "repair_started",
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: "Repair quotation accepted. Mechanic can start repair work.",
+        serviceRequest: request,
+      });
     }
 
-    if (!state.completion) {
-      const problemWork = mockWorkByProblem[request.problem] ||
-        mockWorkByProblem.Other;
-      state.completion = {
-        status: "completed",
-        completedAt: request.completedAt.toISOString(),
-        workCompleted: problemWork.work,
-        problemTitle: problemWork.title,
-        mechanic,
-        responseTimeMinutes: mockTracking.etaMinutes,
-      };
-    } else {
-      state.completion.completedAt = request.completedAt.toISOString();
-      state.completion.mechanic = mechanic;
-    }
+    // Customer rejects repair quotation
+    request.repairQuotation.status = "rejected";
+    request.repairQuotation.respondedAt = new Date();
+    request.repairQuotation.rejectionReason = rejectionReason || "Customer rejected repair quotation";
+    request.status = "repair_rejected";
+    request.repairPayment.status = "not_applicable";
+    await request.save();
+
+    // Notify mechanic: Customer rejected repair quotation
+    await createWorkflowNotification({
+      recipient: request.mechanic._id || request.mechanic,
+      sender: req.user,
+      serviceRequest: request._id,
+      title: "Repair Quotation Rejected",
+      message: "Customer rejected the repair quotation. Do not start repair work. Customer only pays inspection fee.",
+      type: "repair_rejected",
+    });
+
+    // Notify customer
+    await createWorkflowNotification({
+      recipient: request.customer._id || request.customer,
+      sender: request.mechanic._id || request.mechanic,
+      serviceRequest: request._id,
+      title: "Repair Rejected",
+      message: "You rejected the repair quotation. No repair fee is payable. Only the initial inspection fee applies.",
+      type: "repair_rejected",
+    });
 
     return res.status(200).json({
       success: true,
-      requestId: request.id,
-      requestReference: getRequestReference(request.id),
-      completion: state.completion,
+      message: "Repair quotation rejected. No repair fee is payable.",
+      serviceRequest: request,
     });
   } catch (error) {
-    return handleError(res, "Get mock service completion error", error);
+    return handleError(res, "Respond to repair quotation error", error);
   }
 };
 
-export const submitPayment = async (req, res) => {
+// STEP 11: Customer pays repair fee (DEMO PAYMENT ONLY)
+export const payRepairFee = async (req, res) => {
   try {
     const request = await findOwnedRequest(req, res);
     if (!request) return;
 
-    const state = getWorkflowState(request.id);
-    if (request.status !== "completed" || !request.mechanic || !state.completion) {
+    // Strict Rule: Prevent duplicate repair payments
+    if (request.repairPayment?.status === "paid") {
       return res.status(409).json({
         success: false,
-        message: "Complete the service before submitting payment.",
+        message: "Repair fee has already been paid for this request.",
       });
     }
 
-    const {
-      paymentMethod,
-      tip = 0,
-    } = req.body || {};
-
-    if (!["cash", "card", "qr"].includes(paymentMethod)) {
+    // Strict Rule: Repair fee can only be paid after repair completion
+    if (request.status !== "repair_completed") {
       return res.status(400).json({
         success: false,
-        message: "Choose a supported payment method.",
+        message: "Repair fee can only be paid after repair has been completed by mechanic.",
       });
     }
 
-    if (!Number.isFinite(tip) || tip < 0) {
+    // Strict Rule: Repair quotation must have been accepted
+    if (request.repairQuotation?.status !== "accepted") {
+      return res.status(400).json({
+        success: false,
+        message: "Repair quotation was not accepted. No repair fee is payable.",
+      });
+    }
+
+    const { paymentMethod = "card", tip = 0 } = req.body || {};
+    const numTip = Number(tip);
+    if (isNaN(numTip) || numTip < 0) {
       return res.status(400).json({
         success: false,
         message: "Tip must be a non-negative number.",
       });
     }
 
-    const total = mockQuotation.total + tip;
-    if (state.payment) {
-      return res.status(409).json({
+    const baseAmount = request.repairQuotation.totalAmount;
+    if (!baseAmount || baseAmount <= 0) {
+      return res.status(400).json({
         success: false,
-        message: "Payment has already been submitted for this request.",
+        message: "Invalid repair quotation amount.",
       });
     }
 
-    state.payment = {
-      method: paymentMethod,
-      status: "confirmed",
-      baseAmount: mockQuotation.total,
-      tip,
-      amount: total,
-      confirmationCode: `MOCK-${request.id.slice(-6).toUpperCase()}`,
-      paidAt: new Date().toISOString(),
+    const totalAmount = baseAmount + numTip;
+    const transactionId = `DEMO-REP-${Date.now().toString().slice(-6)}-${Math.floor(
+      1000 + Math.random() * 9000
+    )}`;
+
+    // Save separate repair payment record in MongoDB
+    const paymentRecord = await Payment.create({
+      serviceRequest: request._id,
+      customer: req.user,
+      mechanic: request.mechanic._id || request.mechanic,
+      paymentType: "repair",
+      amount: totalAmount,
+      paymentMethod,
+      status: "paid",
+      isDemo: true,
+      transactionId,
+      breakdown: {
+        labourCharge: request.repairQuotation.labourCharge,
+        partsCharge: request.repairQuotation.partsCharge,
+        additionalCharges: request.repairQuotation.additionalCharges,
+        baseAmount,
+        tip: numTip,
+        totalAmount,
+      },
+      paidAt: new Date(),
+    });
+
+    // Update repairPayment on request
+    request.repairPayment = {
+      amount: baseAmount,
+      tip: numTip,
+      totalPaid: totalAmount,
+      paymentType: "demo",
+      paymentMethod,
+      status: "paid",
+      transactionId,
+      paidAt: new Date(),
+    };
+    request.status = "completed";
+    request.completedAt = new Date();
+    await request.save();
+
+    // Notify mechanic: Repair payment completed
+    await createWorkflowNotification({
+      recipient: request.mechanic._id || request.mechanic,
+      sender: req.user,
+      serviceRequest: request._id,
+      title: "Repair Payment Completed",
+      message: `Customer has completed the repair fee demo payment of Rs. ${totalAmount.toLocaleString()}.`,
+      type: "repair_paid",
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Repair fee demo payment confirmed successfully.",
+      payment: paymentRecord,
+      serviceRequest: request,
+    });
+  } catch (error) {
+    return handleError(res, "Pay repair fee error", error);
+  }
+};
+
+// Existing completion & summary endpoints
+export const getCompletion = async (req, res) => {
+  try {
+    const request = await findOwnedRequest(req, res);
+    if (!request) return;
+
+    const state = getWorkflowState(request.id);
+    const [mechanicProfile] = await getEligibleMechanics(request, state);
+
+    const problemWork =
+      mockWorkByProblem[request.problem] || mockWorkByProblem.Other;
+
+    const completion = {
+      status: request.status,
+      completedAt: request.repairCompletedAt || request.completedAt || new Date().toISOString(),
+      workCompleted: request.repairQuotation?.description || problemWork.work,
+      problemTitle: request.problem || problemWork.title,
+      mechanic: mechanicProfile,
+      responseTimeMinutes: mockTracking.etaMinutes,
     };
 
     return res.status(200).json({
       success: true,
       requestId: request.id,
-      payment: state.payment,
+      requestReference: getRequestReference(request.id),
+      completion,
+      serviceRequest: request,
     });
   } catch (error) {
-    return handleError(res, "Submit mock payment error", error);
+    return handleError(res, "Get completion error", error);
   }
+};
+
+export const submitPayment = async (req, res) => {
+  // Alias to payRepairFee for backwards compatibility with any existing mock callers
+  return payRepairFee(req, res);
 };
 
 export const getSummary = async (req, res) => {
@@ -573,12 +876,22 @@ export const getSummary = async (req, res) => {
     if (!request) return;
 
     const state = getWorkflowState(request.id);
-    if (!state.payment || !state.completion) {
-      return res.status(409).json({
-        success: false,
-        message: "Submit payment before requesting the final summary.",
-      });
-    }
+    const [mechanicProfile] = await getEligibleMechanics(request, state);
+
+    // Fetch separate payment records from MongoDB
+    const payments = await Payment.find({
+      serviceRequest: request._id,
+    }).lean();
+
+    const inspectionPaymentRecord = payments.find(
+      (p) => p.paymentType === "inspection"
+    );
+    const repairPaymentRecord = payments.find(
+      (p) => p.paymentType === "repair"
+    );
+
+    const problemWork =
+      mockWorkByProblem[request.problem] || mockWorkByProblem.Other;
 
     return res.status(200).json({
       success: true,
@@ -588,12 +901,40 @@ export const getSummary = async (req, res) => {
       vehicle: request.vehicle,
       problem: request.problem,
       description: request.description,
-      mechanic: state.completion.mechanic,
-      quotation: mockQuotation,
-      completion: state.completion,
-      payment: state.payment,
+      status: request.status,
+      mechanic: mechanicProfile || {
+        name: request.mechanic?.fullName || "Mechanic",
+      },
+      inspectionFee: request.inspectionFee,
+      inspectionPayment: request.inspectionPayment,
+      inspectionPaymentRecord,
+      repairQuotation: request.repairQuotation,
+      repairPayment: request.repairPayment,
+      repairPaymentRecord,
+      quotation: {
+        labour: request.repairQuotation?.labourCharge || 0,
+        parts: request.repairQuotation?.partsCharge || 0,
+        additionalCharges: request.repairQuotation?.additionalCharges || 0,
+        total: request.repairQuotation?.totalAmount || 0,
+        labourDescription: "Repair labour",
+        partsDescription: "Replacement parts",
+      },
+      completion: {
+        completedAt: request.repairCompletedAt || request.completedAt,
+        workCompleted: request.repairQuotation?.description || problemWork.work,
+        problemTitle: request.problem,
+      },
+      payment: request.repairPayment?.status === "paid"
+        ? {
+            method: request.repairPayment.paymentMethod,
+            status: "confirmed",
+            amount: request.repairPayment.totalPaid || request.repairPayment.amount,
+            paidAt: request.repairPayment.paidAt,
+            confirmationCode: request.repairPayment.transactionId,
+          }
+        : null,
     });
   } catch (error) {
-    return handleError(res, "Get mock service summary error", error);
+    return handleError(res, "Get service summary error", error);
   }
 };

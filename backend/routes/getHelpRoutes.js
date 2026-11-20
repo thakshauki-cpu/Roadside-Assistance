@@ -4,7 +4,10 @@ import {
   getNearbyMechanics,
   getAssignment,
   respondToQuotation,
+  payInspectionFee,
   getTracking,
+  respondToRepairQuotation,
+  payRepairFee,
   getCompletion,
   submitPayment,
   getSummary,
@@ -21,7 +24,10 @@ router.use(protect);
 router.get("/:requestId/nearby-mechanics", getNearbyMechanics);
 router.get("/:requestId/assignment", getAssignment);
 router.post("/:requestId/quotation-response", respondToQuotation);
+router.post("/:requestId/pay-inspection", payInspectionFee);
 router.get("/:requestId/tracking", getTracking);
+router.post("/:requestId/repair-quotation-response", respondToRepairQuotation);
+router.post("/:requestId/pay-repair", payRepairFee);
 router.get("/:requestId/completion", getCompletion);
 router.post("/:requestId/payment", submitPayment);
 router.get("/:requestId/summary", getSummary);

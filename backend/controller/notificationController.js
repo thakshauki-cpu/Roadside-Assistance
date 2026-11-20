@@ -1,51 +1,129 @@
-// Temporary Notification Mock Data
+import mongoose from "mongoose";
+import Notification from "../models/Notification.js";
 
+// Helper function to create notification with duplicate check
+export const createWorkflowNotification = async ({
+  recipient,
+  sender = null,
+  serviceRequest = null,
+  title,
+  message,
+  type,
+}) => {
+  try {
+    if (!recipient || !title || !message) return null;
+
+    // Prevent duplicate notification for the same event
+    if (serviceRequest && type) {
+      const existing = await Notification.findOne({
+        recipient,
+        serviceRequest,
+        type,
+      });
+      if (existing) {
+        return existing;
+      }
+    }
+
+    return await Notification.create({
+      recipient,
+      customer: recipient,
+      sender,
+      serviceRequest,
+      title,
+      message,
+      type,
+      isRead: false,
+    });
+  } catch (error) {
+    console.error("Create workflow notification error:", error);
+    return null;
+  }
+};
+
+// Get notifications for current user (customer or mechanic)
 export const getNotifications = async (req, res) => {
   try {
-    const notifications = [
-      {
-        _id: "1",
-        title: "Mechanic Assigned",
-        message: "A mechanic has been assigned to your request.",
-        type: "assigned",
-        isRead: false,
-        createdAt: new Date(),
-      },
-      {
-        _id: "2",
-        title: "Mechanic On The Way",
-        message: "Your mechanic is on the way to your location.",
-        type: "on_the_way",
-        isRead: false,
-        createdAt: new Date(),
-      },
-      {
-        _id: "3",
-        title: "Service Completed",
-        message: "Your roadside assistance service has been completed.",
-        type: "completed",
-        isRead: true,
-        createdAt: new Date(),
-      },
-      {
-        _id: "4",
-        title: "Request Submitted",
-        message: "Your roadside assistance request was submitted successfully.",
-        type: "request",
-        isRead: true,
-        createdAt: new Date(),
-      },
-    ];
+    const userId = req.user;
 
-    res.status(200).json({
+    const notifications = await Notification.find({
+      $or: [{ recipient: userId }, { customer: userId }],
+    })
+      .populate("sender", "fullName role")
+      .populate("serviceRequest", "problem status location")
+      .sort({ createdAt: -1 })
+      .limit(50)
+      .lean();
+
+    return res.status(200).json({
       success: true,
       count: notifications.length,
       notifications,
     });
   } catch (error) {
-    res.status(500).json({
+    console.error("Get notifications error:", error);
+    return res.status(500).json({
       success: false,
       message: "Unable to fetch notifications.",
+    });
+  }
+};
+
+// Mark single notification as read
+export const markNotificationAsRead = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid notification ID.",
+      });
+    }
+
+    const notification = await Notification.findOneAndUpdate(
+      { _id: id, recipient: req.user },
+      { $set: { isRead: true } },
+      { new: true }
+    );
+
+    if (!notification) {
+      return res.status(404).json({
+        success: false,
+        message: "Notification not found.",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      notification,
+    });
+  } catch (error) {
+    console.error("Mark notification as read error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Unable to update notification.",
+    });
+  }
+};
+
+// Mark all notifications as read for current user
+export const markAllNotificationsAsRead = async (req, res) => {
+  try {
+    await Notification.updateMany(
+      { recipient: req.user, isRead: false },
+      { $set: { isRead: true } }
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "All notifications marked as read.",
+    });
+  } catch (error) {
+    console.error("Mark all notifications as read error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Unable to mark notifications as read.",
     });
   }
 };

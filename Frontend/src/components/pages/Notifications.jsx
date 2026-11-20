@@ -23,7 +23,13 @@ import {
 
 import DashboardSidebar from "../Dashboard/Sidebar";
 import DashboardTopbar from "../Dashboard/Topbar";
-import { getNotifications } from "../../api/notifications";
+import MechanicSidebar from "../Mechanic/MechanicSidebar";
+import MechanicTopbar from "../Mechanic/Topbar";
+import {
+  getNotifications,
+  markNotificationAsRead,
+  markAllNotificationsAsRead,
+} from "../../api/notifications";
 import "../styles/Notifications.css";
 
 const notificationIcons = {
@@ -35,7 +41,43 @@ const notificationIcons = {
   review: Star,
 };
 
+const mapNotificationType = (type) => {
+  if (
+    type === "assigned" ||
+    type === "arrived" ||
+    type === "inspection_started" ||
+    type === "repair_started" ||
+    type === "repair_rejected"
+  ) {
+    return "request";
+  }
+  if (type === "on_the_way" || type === "mechanic_notified") {
+    return "onway";
+  }
+  if (
+    type === "inspection_completed" ||
+    type === "repair_quotation_submitted"
+  ) {
+    return "quotation";
+  }
+  if (type === "repair_accepted" || type === "repair_completed") {
+    return "completed";
+  }
+  if (type === "inspection_paid" || type === "repair_paid") {
+    return "payment";
+  }
+  return "request";
+};
+
 function Notifications() {
+  const [user] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("user") || "{}");
+    } catch {
+      return {};
+    }
+  });
+  const isMechanic = user?.role === "mechanic";
   const [notifications, setNotifications] = useState([]);
 
   const [loading, setLoading] = useState(true);
@@ -64,27 +106,15 @@ function Notifications() {
         const formattedNotifications = data.notifications.map(
           (notification) => ({
             id: notification._id,
-
-            // Convert backend notification types to frontend types
-            type:
-              notification.type === "assigned"
-                ? "request"
-                : notification.type === "on_the_way"
-                ? "onway"
-                : notification.type,
-
+            type: mapNotificationType(notification.type),
             title: notification.title,
             description: notification.message,
-
             time: notification.createdAt
               ? new Date(notification.createdAt).toLocaleString()
               : "Recently",
-
-            location: "",
-            status: "",
+            location: notification.serviceRequest?.location?.address || "",
+            status: notification.serviceRequest?.status || "",
             unread: !notification.isRead,
-
-            // Current backend mock data does not provide actions
             actions: [],
           })
         );
@@ -126,7 +156,12 @@ function Notifications() {
   }, [notifications, activeTab, search]);
 
   // Mark all notifications as read
-  const markAllAsRead = () => {
+  const markAllAsRead = async () => {
+    try {
+      await markAllNotificationsAsRead();
+    } catch (e) {
+      console.error(e);
+    }
     setNotifications((previous) =>
       previous.map((notification) => ({
         ...notification,
@@ -136,7 +171,12 @@ function Notifications() {
   };
 
   // Mark one notification as read
-  const markAsRead = (id) => {
+  const markAsRead = async (id) => {
+    try {
+      await markNotificationAsRead(id);
+    } catch (e) {
+      console.error(e);
+    }
     setNotifications((previous) =>
       previous.map((notification) =>
         notification.id === id
@@ -206,10 +246,18 @@ function Notifications() {
 
   return (
     <div className="notifications-page">
-      <DashboardSidebar activeItem="Notifications" />
+      {isMechanic ? (
+        <MechanicSidebar activeItem="Notifications" />
+      ) : (
+        <DashboardSidebar activeItem="Notifications" />
+      )}
 
       <main className="notifications-main">
-        <DashboardTopbar />
+        {isMechanic ? (
+          <MechanicTopbar mechanicName={user?.fullName || "Mechanic"} />
+        ) : (
+          <DashboardTopbar />
+        )}
 
         {/* Notification Heading */}
         <section className="notifications-heading">

@@ -16,6 +16,8 @@ import {
   X,
   ArrowRight,
   LockKeyhole,
+  AlertCircle,
+  Truck,
 } from "lucide-react";
 
 import DashboardSidebar from "../../Dashboard/Sidebar";
@@ -25,6 +27,7 @@ import {
   getAssignment,
   getNearbyMechanics,
   respondToQuotation,
+  payInspectionFee,
 } from "../../../api/getHelp";
 import { getCreatedRequestId, readRequest } from "./requestSampleData";
 import "../../styles/GetHelp.css";
@@ -39,6 +42,9 @@ function MechanicFound() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState("");
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("card");
+  const [showDemoModal, setShowDemoModal] = useState(false);
+  const [demoSuccess, setDemoSuccess] = useState(null);
 
   useEffect(() => {
     let active = true;
@@ -55,9 +61,29 @@ function MechanicFound() {
         ]);
         if (!active) return;
 
+        // If already paid inspection fee or further in workflow, redirect to tracking
+        if (
+          assignmentData.inspectionPayment?.status === "paid" ||
+          [
+            "inspection_paid",
+            "on_the_way",
+            "arrived",
+            "inspecting",
+            "inspection_completed",
+            "quotation_submitted",
+            "repair_in_progress",
+            "repair_rejected",
+            "repair_completed",
+            "completed",
+          ].includes(assignmentData.status)
+        ) {
+          navigate("/get-help/tracking");
+          return;
+        }
+
         setNearbyMechanics(nearbyData.mechanics);
         setAssignment(assignmentData);
-        setSecondsLeft(assignmentData.quotation.quotationHoldSeconds);
+        setSecondsLeft(assignmentData.quotation?.quotationHoldSeconds || 300);
       } catch (loadError) {
         if (active) setError(loadError.message);
       } finally {
@@ -69,7 +95,7 @@ function MechanicFound() {
     return () => {
       active = false;
     };
-  }, [requestId]);
+  }, [requestId, navigate]);
 
   useEffect(() => {
     if (!assignment || secondsLeft <= 0) return undefined;
@@ -82,7 +108,15 @@ function MechanicFound() {
   const minutes = String(Math.floor(secondsLeft / 60)).padStart(2, "0");
   const seconds = String(secondsLeft % 60).padStart(2, "0");
   const mechanic = assignment?.mechanic;
-  const quotation = assignment?.quotation;
+
+  // Use real backend inspection fee or fallback to default breakdown
+  const inspectionFee = assignment?.inspectionFee || {
+    travelFee: 500,
+    visitFee: 500,
+    inspectionCharge: 1000,
+    totalAmount: 2000,
+    description: "Mechanic travelling, location visit, and vehicle inspection",
+  };
 
   const handleQuotationResponse = async (response) => {
     try {
@@ -90,7 +124,8 @@ function MechanicFound() {
       setError("");
       const result = await respondToQuotation(requestId, response, mechanic.id);
       if (response === "accepted") {
-        navigate("/get-help/tracking");
+        // Show demo payment modal for inspection fee
+        setShowDemoModal(true);
       } else {
         setNearbyMechanics((mechanics) =>
           mechanics.filter((item) => item.id !== mechanic.id)
@@ -101,7 +136,7 @@ function MechanicFound() {
           noMechanicsAvailable: result.noMoreMechanics,
         }));
         if (result.nextMechanic) {
-          setSecondsLeft(quotation.quotationHoldSeconds);
+          setSecondsLeft(assignment?.quotation?.quotationHoldSeconds || 300);
         }
       }
     } catch (actionError) {
@@ -111,7 +146,36 @@ function MechanicFound() {
     }
   };
 
-  if (loading || !assignment || !quotation) {
+  // STEP 3: Customer executes demo payment for inspection fee
+  const handleExecuteDemoPayment = async () => {
+    try {
+      setActionLoading(true);
+      setError("");
+
+      // Ensure mechanic acceptance is saved if not yet accepted
+      if (assignment.status === "pending" || assignment.status === "searching") {
+        await respondToQuotation(requestId, "accepted", mechanic.id);
+      }
+
+      // Call backend to validate and record demo payment in MongoDB
+      const result = await payInspectionFee(requestId, {
+        paymentMethod: selectedPaymentMethod,
+      });
+
+      setDemoSuccess(result.message || "Inspection fee demo payment confirmed!");
+
+      // Short delay to display success confirmation before navigating to Tracking
+      setTimeout(() => {
+        navigate("/get-help/tracking");
+      }, 1200);
+    } catch (payError) {
+      setError(payError.message || "Failed to process inspection fee demo payment.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  if (loading || !assignment) {
     return (
       <div className="gethelp-page">
         <DashboardSidebar activeItem="My Requests" />
@@ -174,9 +238,9 @@ function MechanicFound() {
 
             <div className="found-banner-text">
               <h2>
-                Mechanic found <span className="accepted-badge">Quotation</span>
+                Mechanic found <span className="accepted-badge">Inspection Fee</span>
               </h2>
-              <p>{mechanic.name} is available to assist with this request.</p>
+              <p>{mechanic.name} is ready for dispatch upon inspection fee confirmation.</p>
             </div>
 
             <div className="found-timer">
@@ -192,7 +256,6 @@ function MechanicFound() {
             <div className="found-left">
               <section className="gethelp-card">
                 <div className="mechanic-top">
-                  {/* Photo placeholder: the first letter of the name */}
                   <div className="mechanic-photo">{mechanic.name.charAt(0)}</div>
 
                   <div>
@@ -218,6 +281,7 @@ function MechanicFound() {
                         <Zap size={13} /> ETA ~{mechanic.etaMinutes} mins
                       </span>
                     </div>
+
                     <p className="mechanic-address">
                       Vehicle: {mechanic.unit} · {mechanic.plate}
                     </p>
@@ -242,7 +306,7 @@ function MechanicFound() {
               </section>
 
               <section className="gethelp-card">
-                <h4 className="specialty-title">AVAILABLE  MECHANICS</h4>
+                <h4 className="specialty-title">AVAILABLE MECHANICS</h4>
                 <div className="specialty-grid">
                   {nearbyMechanics.map((item) => (
                     <div className="specialty-item" key={item.id}>
@@ -250,89 +314,119 @@ function MechanicFound() {
                       <span>
                         <strong>{item.name}</strong> · {item.available ? "Available" : "Unavailable"} ·
                         {" "}{item.rating} ({item.reviews} reviews) · {item.address} ·
-                        {" "}{item.distanceKm} km · ETA {item.etaMinutes} mins · {item.unit}
-                        {" "}{item.plate} · {item.specialties.join(", ")}
+                        {" "}{item.distanceKm} km · ETA {item.etaMinutes} mins
                       </span>
                     </div>
                   ))}
                 </div>
               </section>
-
             </div>
 
-            {/* ===== Right column: quotation ===== */}
+            {/* ===== Right column: STEP 2 & 3 Inspection Fee ===== */}
             <div className="found-right">
               <section className="gethelp-card quotation-card">
                 <div className="quotation-top">
-                  <span className="quotation-label">OFFICIAL ESTIMATE</span>
-                  <span className="guaranteed-badge">Guaranteed</span>
+                  <span className="quotation-label">INSPECTION FEE</span>
+                  <span className="guaranteed-badge">Pre-Dispatch</span>
                 </div>
 
-                <h2>Upfront Service Quotation</h2>
+                <h2>Inspection Fee Breakdown</h2>
                 <p className="gh-help-text">
-                  Guaranteed price with zero surprise charges. All prices in Sri Lankan Rupees (Rs.
-                  / LKR).
+                  Covers mechanic travel and on-site diagnosis. Repair charges for labour and parts will be quoted separately after inspection.
                 </p>
 
                 <div className="quotation-box">
                   <div className="quotation-line">
                     <div>
-                      <strong>Labour Charge</strong>
-                      <p>{quotation.labourDescription}</p>
+                      <strong>Mechanic Travelling Charge</strong>
+                      <p>Fuel &amp; distance coverage to breakdown area</p>
                     </div>
-                    <strong>Rs. {quotation.labour.toLocaleString()}</strong>
+                    <strong>Rs. {Number(inspectionFee.travelFee || 0).toLocaleString()}</strong>
                   </div>
 
                   <div className="quotation-line">
                     <div>
-                      <strong>Parts &amp; Consumables</strong>
-                      <p>{quotation.partsDescription}</p>
+                      <strong>Breakdown Location Visit</strong>
+                      <p>Emergency roadside dispatch fee</p>
                     </div>
-                    <strong>Rs. {quotation.parts.toLocaleString()}</strong>
+                    <strong>Rs. {Number(inspectionFee.visitFee || 0).toLocaleString()}</strong>
                   </div>
-                  {quotation.additionalCharges > 0 && (
-                    <div className="quotation-line">
-                      <strong>Additional Charges</strong>
-                      <strong>Rs. {quotation.additionalCharges.toLocaleString()}</strong>
+
+                  <div className="quotation-line">
+                    <div>
+                      <strong>Vehicle Inspection Charge</strong>
+                      <p>On-site diagnostic inspection &amp; tool usage</p>
                     </div>
-                  )}
+                    <strong>Rs. {Number(inspectionFee.inspectionCharge || 0).toLocaleString()}</strong>
+                  </div>
 
                   <div className="quotation-total">
                     <div>
-                      <small>TOTAL ESTIMATED AMOUNT</small>
-                      <span>{quotation.estimatedServiceMinutes} mins estimated service time</span>
+                      <small>TOTAL INSPECTION FEE</small>
+                      <span>Pre-payment required to dispatch mechanic</span>
                     </div>
-                    <strong>Rs. {quotation.total.toLocaleString()}</strong>
+                    <strong>Rs. {Number(inspectionFee.totalAmount || 0).toLocaleString()}</strong>
                   </div>
                 </div>
 
-                {/* <div className="guarantee-note">
-                  <CircleCheck size={16} />
-                  <p>
-                    <strong>RoadMate Fixed-Price Guarantee:</strong> The mechanic cannot alter this
-                    quotation on site without your explicit verbal and in-app consent.
+                <div className="guarantee-note" style={{ background: "#eef4ff", border: "1px solid #c9daff", padding: "12px", borderRadius: "10px", marginTop: "14px" }}>
+                  <CircleCheck size={16} color="#1453ff" />
+                  <p style={{ margin: 0, fontSize: "12px", color: "#223567" }}>
+                    <strong>Notice:</strong> This inspection fee confirms the mechanic dispatch. The mechanic will NOT travel until this fee is paid.
                   </p>
-                </div> */}
+                </div>
 
-                <p className="settlement-title">Accepted Settlement Upon Work Completion:</p>
+                <p className="settlement-title" style={{ marginTop: "14px" }}>Choose Demo Payment Method:</p>
                 <div className="settlement-chips">
-                  <span>
-                    <Banknote size={14} /> Cash (LKR)
+                  <span
+                    onClick={() => setSelectedPaymentMethod("card")}
+                    style={{
+                      cursor: "pointer",
+                      border: selectedPaymentMethod === "card" ? "2px solid #1453ff" : "1px solid #dfe3ee",
+                      background: selectedPaymentMethod === "card" ? "#eef2ff" : "#fff",
+                      fontWeight: selectedPaymentMethod === "card" ? "bold" : "normal"
+                    }}
+                  >
+                    <CreditCard size={14} /> Card (Demo)
                   </span>
-                  <span>
-                    <QrCode size={14} /> LankaQR Instant
+                  <span
+                    onClick={() => setSelectedPaymentMethod("qr")}
+                    style={{
+                      cursor: "pointer",
+                      border: selectedPaymentMethod === "qr" ? "2px solid #1453ff" : "1px solid #dfe3ee",
+                      background: selectedPaymentMethod === "qr" ? "#eef2ff" : "#fff",
+                      fontWeight: selectedPaymentMethod === "qr" ? "bold" : "normal"
+                    }}
+                  >
+                    <QrCode size={14} /> LankaQR (Demo)
                   </span>
-                  <span>
-                    <CreditCard size={14} /> Commercial / BOC Card
+                  <span
+                    onClick={() => setSelectedPaymentMethod("cash")}
+                    style={{
+                      cursor: "pointer",
+                      border: selectedPaymentMethod === "cash" ? "2px solid #1453ff" : "1px solid #dfe3ee",
+                      background: selectedPaymentMethod === "cash" ? "#eef2ff" : "#fff",
+                      fontWeight: selectedPaymentMethod === "cash" ? "bold" : "normal"
+                    }}
+                  >
+                    <Banknote size={14} /> Cash Guarantee
                   </span>
                 </div>
 
-                <p className="pay-note">
-                  Pay nothing now. Payment is strictly executed after testing and your full
-                  sign-off.
-                </p>
+                {/* Demo Payment simulation button */}
+                <div style={{ marginTop: "18px" }}>
+                  <button
+                    type="button"
+                    className="gh-next-button"
+                    style={{ width: "100%", justifyContent: "center", padding: "14px", fontSize: "15px" }}
+                    onClick={() => setShowDemoModal(true)}
+                    disabled={actionLoading || !mechanic}
+                  >
+                    Pay Inspection Fee (Demo Simulation) - Rs. {Number(inspectionFee.totalAmount || 0).toLocaleString()}
+                    <ArrowRight size={16} />
+                  </button>
+                </div>
               </section>
-
             </div>
           </div>
 
@@ -361,16 +455,132 @@ function MechanicFound() {
               <button
                 type="button"
                 className="gh-next-button"
-                onClick={() => handleQuotationResponse("accepted")}
+                onClick={() => setShowDemoModal(true)}
                 disabled={actionLoading || !mechanic}
               >
-                {actionLoading ? "Saving..." : "Accept Mechanic & Track"}
+                {actionLoading ? "Processing..." : "Pay Inspection Fee"}
                 <ArrowRight size={16} />
               </button>
             </div>
           </div>
         </div>
       </main>
+
+      {/* STEP 3: Demo Payment Confirmation Modal */}
+      {showDemoModal && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            background: "rgba(10, 20, 40, 0.6)",
+            display: "grid",
+            placeItems: "center",
+            zIndex: 9999,
+            padding: "20px",
+          }}
+        >
+          <div
+            style={{
+              background: "#fff",
+              borderRadius: "16px",
+              maxWidth: "480px",
+              width: "100%",
+              padding: "28px",
+              boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
+              textAlign: "center",
+            }}
+          >
+            <div
+              style={{
+                width: "56px",
+                height: "56px",
+                background: "#e8efff",
+                color: "#1453ff",
+                borderRadius: "50%",
+                display: "grid",
+                placeItems: "center",
+                margin: "0 auto 16px",
+              }}
+            >
+              <CreditCard size={28} />
+            </div>
+
+            <h3 style={{ fontSize: "20px", margin: "0 0 8px", color: "#14203b" }}>
+              DEMO PAYMENT SIMULATION
+            </h3>
+
+            <p style={{ fontSize: "13px", color: "#66728a", margin: "0 0 18px", lineHeight: "1.5" }}>
+              This is a <strong>DEMO payment simulation</strong> for testing RoadMate. <strong>No real money will be transferred</strong> or charged to your account.
+            </p>
+
+            <div
+              style={{
+                background: "#f7f8fd",
+                borderRadius: "12px",
+                padding: "16px",
+                textAlign: "left",
+                marginBottom: "20px",
+                border: "1px solid #e2e6f4",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px", fontSize: "13px" }}>
+                <span style={{ color: "#66728a" }}>Purpose:</span>
+                <strong>Vehicle Inspection &amp; Travel Fee</strong>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px", fontSize: "13px" }}>
+                <span style={{ color: "#66728a" }}>Mechanic:</span>
+                <strong>{mechanic.name}</strong>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px", fontSize: "13px" }}>
+                <span style={{ color: "#66728a" }}>Payment Method:</span>
+                <strong style={{ textTransform: "capitalize" }}>Demo {selectedPaymentMethod}</strong>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", paddingTop: "8px", borderTop: "1px dashed #cbd5e1", fontSize: "15px" }}>
+                <span style={{ fontWeight: "bold" }}>Total Demo Amount:</span>
+                <strong style={{ color: "#1453ff" }}>Rs. {Number(inspectionFee.totalAmount || 0).toLocaleString()}</strong>
+              </div>
+            </div>
+
+            {demoSuccess && (
+              <div style={{ background: "#ecfdf5", color: "#065f46", padding: "10px", borderRadius: "8px", marginBottom: "16px", fontSize: "13px" }}>
+                ✓ {demoSuccess}
+              </div>
+            )}
+
+            {error && (
+              <p className="form-error" role="alert" style={{ marginBottom: "16px" }}>
+                {error}
+              </p>
+            )}
+
+            <div style={{ display: "flex", gap: "12px" }}>
+              <button
+                type="button"
+                className="gh-back-button"
+                style={{ flex: 1, justifyContent: "center" }}
+                onClick={() => setShowDemoModal(false)}
+                disabled={actionLoading}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="gh-next-button"
+                style={{ flex: 2, justifyContent: "center" }}
+                onClick={handleExecuteDemoPayment}
+                disabled={actionLoading}
+              >
+                {actionLoading ? "Processing..." : "Confirm Demo Payment"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

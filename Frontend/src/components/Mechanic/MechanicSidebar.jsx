@@ -5,6 +5,7 @@ import {
   CircleUserRound,
   LogOut,
   MapPin,
+  Bell,
 } from "lucide-react";
 
 import logo from "../../assets/logo.png";
@@ -31,17 +32,12 @@ const menuItems = [
     icon: CircleUserRound,
     path: "/mechanic/profile",
   },
-  // {
-  //   label: "Notifications",
-  //   icon: Bell,
-  //   path: "/mechanic/notifications",
-  //   showDot: true,
-  // },
-  // {
-  //   label: "Settings",
-  //   icon: Settings,
-  //   path: "/mechanic/settings",
-  // },
+  {
+    label: "Notifications",
+    icon: Bell,
+    path: "/notifications",
+    showDot: true,
+  },
 ];
 
 function MechanicSidebar({

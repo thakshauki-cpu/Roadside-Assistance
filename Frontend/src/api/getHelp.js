@@ -61,8 +61,30 @@ export const respondToQuotation = (requestId, response, mechanicId) =>
     body: JSON.stringify({ response, mechanicId }),
   });
 
+// STEP 3: Customer pays inspection fee (DEMO PAYMENT)
+export const payInspectionFee = (requestId, payment = {}) =>
+  request(requestPath(requestId, "pay-inspection"), {
+    method: "POST",
+    body: JSON.stringify(payment),
+  });
+
+// STEP 6: Get live tracking data from backend
 export const getTracking = (requestId) =>
   request(requestPath(requestId, "tracking"));
+
+// STEP 9: Customer accepts or rejects repair quotation
+export const respondToRepairQuotation = (requestId, { response, rejectionReason }) =>
+  request(requestPath(requestId, "repair-quotation-response"), {
+    method: "POST",
+    body: JSON.stringify({ response, rejectionReason }),
+  });
+
+// STEP 11: Final repair fee demo payment
+export const payRepairFee = (requestId, payment = {}) =>
+  request(requestPath(requestId, "pay-repair"), {
+    method: "POST",
+    body: JSON.stringify(payment),
+  });
 
 export const getCompletion = (requestId) =>
   request(requestPath(requestId, "completion"));

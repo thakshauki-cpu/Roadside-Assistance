@@ -52,6 +52,9 @@ export const updateMechanicAvailability = (isAvailable) =>
 export const getPendingServiceRequests = () =>
   request("/api/service-requests/mechanic/pending");
 
+export const getAssignedServiceRequests = () =>
+  request("/api/service-requests/mechanic/assigned");
+
 export const getMechanicReviews = () => request("/api/mechanics/me/reviews");
 
 export const getMechanics = ({
@@ -78,3 +81,68 @@ export const rejectServiceRequest = (requestId) =>
   request(`/api/service-requests/mechanic/${encodeURIComponent(requestId)}/reject`, {
     method: "PATCH",
   });
+
+// STEP 2: Mechanic submits inspection fee
+export const submitInspectionFee = (requestId, feeData) =>
+  request(
+    `/api/service-requests/mechanic/${encodeURIComponent(requestId)}/inspection-fee`,
+    {
+      method: "POST",
+      body: JSON.stringify(feeData),
+    }
+  );
+
+// STEP 5: Mechanic starts traveling
+export const mechanicStartTravel = (requestId) =>
+  request(
+    `/api/service-requests/mechanic/${encodeURIComponent(requestId)}/on-the-way`,
+    {
+      method: "PATCH",
+    }
+  );
+
+// STEP 5: Mechanic marks arrived
+export const mechanicMarkArrived = (requestId) =>
+  request(
+    `/api/service-requests/mechanic/${encodeURIComponent(requestId)}/arrived`,
+    {
+      method: "PATCH",
+    }
+  );
+
+// STEP 7: Mechanic starts inspection
+export const mechanicStartInspection = (requestId) =>
+  request(
+    `/api/service-requests/mechanic/${encodeURIComponent(requestId)}/start-inspection`,
+    {
+      method: "PATCH",
+    }
+  );
+
+// STEP 7: Mechanic completes inspection
+export const mechanicCompleteInspection = (requestId) =>
+  request(
+    `/api/service-requests/mechanic/${encodeURIComponent(requestId)}/complete-inspection`,
+    {
+      method: "PATCH",
+    }
+  );
+
+// STEP 8: Mechanic submits repair quotation
+export const submitRepairQuotation = (requestId, quotationData) =>
+  request(
+    `/api/service-requests/mechanic/${encodeURIComponent(requestId)}/repair-quotation`,
+    {
+      method: "POST",
+      body: JSON.stringify(quotationData),
+    }
+  );
+
+// STEP 10: Mechanic marks repair completed
+export const mechanicCompleteRepair = (requestId) =>
+  request(
+    `/api/service-requests/mechanic/${encodeURIComponent(requestId)}/complete-repair`,
+    {
+      method: "PATCH",
+    }
+  );
