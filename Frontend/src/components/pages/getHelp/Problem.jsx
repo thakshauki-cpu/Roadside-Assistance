@@ -17,7 +17,7 @@ import {
 
 import DashboardSidebar from "../../Dashboard/Sidebar";
 import DashboardTopbar from "../../Dashboard/Topbar";
-import RequestStepper from "../../getHelp/RequestStepper";
+import RequestStepper from "../../gethelp/RequestStepper";
 import "../../styles/GetHelp.css";
 
 // The 8 problem cards. Icons are stored without < > and used later as <Icon />

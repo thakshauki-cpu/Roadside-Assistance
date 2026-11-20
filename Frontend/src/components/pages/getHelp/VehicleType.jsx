@@ -20,7 +20,7 @@ import {
 
 import DashboardSidebar from "../../Dashboard/Sidebar";
 import DashboardTopbar from "../../Dashboard/Topbar";
-import RequestStepper from "../../getHelp/RequestStepper";
+import RequestStepper from "../../gethelp/RequestStepper";
 import "../../styles/GetHelp.css";
 
 // The 5 vehicle cards. "icon" is a component, so we store it without < >.
