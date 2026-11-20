@@ -12,6 +12,7 @@ import {
 
 import "../styles/LoginPage.css";
 import { Link, useNavigate } from "react-router-dom";
+import logo from "../../assets/logo.png";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -173,7 +174,7 @@ function LoginPage() {
 
         <div className="login-brand">
           <img
-            src="/src/assets/logo.png"
+            src={logo}
             alt="Roadmate"
             className="logo"
           />

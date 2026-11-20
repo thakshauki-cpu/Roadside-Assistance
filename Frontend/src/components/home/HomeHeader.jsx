@@ -1,5 +1,6 @@
 import {  UserRound, Menu } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import logo from "../../assets/logo.png";
 
 function HomeHeader() {
   const navigate = useNavigate();
@@ -8,7 +9,7 @@ function HomeHeader() {
     <header className="home-header">
       <a href="/"  className="brand">
           <img
-          src="/src/assets/logo.png"
+          src={logo}
           alt="Roadmate"
           className="logo"
           />

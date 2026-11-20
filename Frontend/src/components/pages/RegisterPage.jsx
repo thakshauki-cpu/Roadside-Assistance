@@ -15,6 +15,7 @@ import {
 
 import "../styles/Register.css";
 import { registerUser } from "../../api/auth.js";
+import logo from "../../assets/logo.png";
 
 function RegisterPage() {
   const navigate = useNavigate();
@@ -79,7 +80,7 @@ function RegisterPage() {
       <main className="register-page">
         <Link to="/" className="register-brand">
           <img
-            src="/src/assets/logo.png"
+            src={logo}
             alt="Roadmate"
             className="logo"
           />
@@ -153,7 +154,7 @@ function RegisterPage() {
     <main className="register-page">
       <Link to="/" className="register-brand">
         <img
-          src="/src/assets/logo.png"
+          src={logo}
           alt="Roadmate"
           className="logo"
         />

@@ -17,6 +17,7 @@ import {
 
 import MechanicLocationPicker from "./MechanicLocationPicker";
 import { registerUser } from "../../../api/auth.js";
+import logo from "../../../assets/logo.png";
 
 import "../../styles/Mechanic/MechanicRegister.css";
 
@@ -149,7 +150,7 @@ function MechanicRegisterPage() {
       <header className="mechanic-register-header">
         <Link to="/" className="mechanic-register-brand">
           <img
-            src="/src/assets/logo.png"
+            src={logo}
             alt="Roadmate"
             className="logo"
           />

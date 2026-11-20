@@ -8,6 +8,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import roadsideAssistanceImage from "../../assets/roadside-assistance.png";
 
 
 function HeroSection() {
@@ -78,7 +79,7 @@ function HeroSection() {
 
       <div className="hero-image-wrapper">
         <img
-          src="/src/assets/roadside-assistance.png"
+          src={roadsideAssistanceImage}
           alt="Mechanic helping a driver with a broken-down car"
           className="hero-image"
         />

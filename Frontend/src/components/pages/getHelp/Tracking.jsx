@@ -35,20 +35,8 @@ import {
 } from "./requestSampleData";
 import "../../styles/GetHelp.css";
 import "../../styles/Tracking.css";
-
-// ----- Optional pictures (see the notes about src/assets) -----
-// import.meta.glob finds the file if it exists. If it does not exist the page
-// still works and shows a simple placeholder instead of breaking the build.
-const mapFiles = import.meta.glob("../../../assets/tracking-map.{png,jpg,jpeg,webp}", {
-  eager: true,
-  import: "default",
-});
-const mechanicFiles = import.meta.glob("../../../assets/mechanic-siva.{png,jpg,jpeg,webp}", {
-  eager: true,
-  import: "default",
-});
-const mapImage = Object.values(mapFiles)[0];
-const mechanicImage = Object.values(mechanicFiles)[0];
+import mapImage from "../../../assets/front map.PNG";
+import mechanicImage from "../../../assets/mechanic1.PNG";
 
 const SECONDS_PER_MINUTE = 2;
 
@@ -209,14 +197,7 @@ function Tracking() {
             {/* ===== Left column: map and milestones ===== */}
             <div className="track-left">
               <div className="track-map">
-                {mapImage ? (
-                  <img className="track-map-image" src={mapImage} alt="Map of Batticaloa" />
-                ) : (
-                  <p className="track-missing">
-                    Map picture not added yet. Export the Figma image inside "Background+Shadow"
-                    (node 10:1481) and save it as <strong>src/assets/tracking-map.png</strong>
-                  </p>
-                )}
+                <img className="track-map-image" src={mapImage} alt="Map of Batticaloa" />
 
                 {/* Dashed blue route from the van to the breakdown spot */}
                 <svg className="track-route" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">

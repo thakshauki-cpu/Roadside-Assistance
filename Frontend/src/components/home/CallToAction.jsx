@@ -5,6 +5,7 @@ import {
   Clock3,
   Headset,
 } from "lucide-react";
+import roadmateHandshakeImage from "../../assets/roadmate-handshake.png";
 
 function CallToAction() {
   return (
@@ -45,7 +46,7 @@ function CallToAction() {
 
       <div className="cta-image-wrapper">
         <img
-          src="/src/assets/roadmate-handshake.png"
+          src={roadmateHandshakeImage}
           alt="Handshake representing trust and roadside assistance"
           className="cta-image"
         />

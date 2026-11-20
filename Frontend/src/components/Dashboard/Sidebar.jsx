@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 
 import { useNavigate } from "react-router-dom";
+import logo from "../../assets/logo.png";
 import "./Sidebar.css";
 
 const menuItems = [
@@ -72,7 +73,7 @@ function DashboardSidebar({ activeItem = "Dashboard" }) {
       {/* Brand */}
       <div className="sidebar-brand">
           <img
-          src="/src/assets/logo.png"
+          src={logo}
           alt="Roadmate"
           className="logo"
           />

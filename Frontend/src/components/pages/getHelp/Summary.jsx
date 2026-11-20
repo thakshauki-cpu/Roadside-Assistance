@@ -36,13 +36,7 @@ import {
 } from "./requestSampleData";
 import "../../styles/GetHelp.css";
 import "../../styles/Summary.css";
-
-// Optional mechanic photo (same file as the Tracking page, see the notes)
-const mechanicFiles = import.meta.glob("../../../assets/mechanic-siva.{png,jpg,jpeg,webp}", {
-  eager: true,
-  import: "default",
-});
-const mechanicImage = Object.values(mechanicFiles)[0];
+import mechanicImage from "../../../assets/mechanic1.PNG";
 
 const paymentMethods = [
   { id: "cash", name: "Cash", text: "Hand over cash on-site", icon: Banknote },

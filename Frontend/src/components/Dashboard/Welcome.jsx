@@ -21,6 +21,7 @@ import bikeImage from "../../assets/Bike.PNG";
 import vanImage from "../../assets/Van.Png";
 import truckImage from "../../assets/Truck.PNG";
 import threeWheelerImage from "../../assets/Threewheeler.PNG";
+import frontMapImage from "../../assets/front map.PNG";
 
 const vehicleImages = {
   car: carImage,
@@ -217,7 +218,7 @@ function WelcomeSection() {
 
           <div className="roadside-banner-image">
             <img
-              src="/src/assets/front map.PNG"
+              src={frontMapImage}
               alt="Vehicle roadside assistance"
             />
           </div>
