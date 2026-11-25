@@ -1,115 +1,73 @@
-
+import mongoose from "mongoose";
 import Notification from "../models/Notification.js";
-import ServiceRequest from "../models/ServiceRequest.js";
+import { emitToUser } from "../socket.js";
 
-// Build notifications from real ServiceRequest records.
-const getEventsForRequest = (request) => {
-  const events = [
-    {
-      eventKey: `${request._id}:request-created`,
-      type: "request",
-      title: "Request Submitted",
-      message: `Your roadside assistance request for ${request.problem} was submitted successfully.`,
-      createdAt: request.createdAt,
-    },
-  ];
-
-  const statusEvents = {
-    assigned: {
-      type: "assigned",
-      title: "Mechanic Assigned",
-      message: "A mechanic has been assigned to your service request.",
-    },
-    accepted: {
-      type: "assigned",
-      title: "Mechanic Assigned",
-      message: "Your selected mechanic has accepted the service request.",
-    },
-    on_the_way: {
-      type: "on_the_way",
-      title: "Mechanic On The Way",
-      message: "Your mechanic is on the way to your location.",
-    },
-    in_progress: {
-      type: "in_progress",
-      title: "Service In Progress",
-      message: "Your roadside assistance service is now in progress.",
-    },
-    completed: {
-      type: "completed",
-      title: "Service Completed",
-      message: "Your roadside assistance service has been completed.",
-    },
-    cancelled: {
-      type: "cancelled",
-      title: "Request Cancelled",
-      message: "Your roadside assistance request has been cancelled.",
-    },
-  };
-
-  const statusEvent = statusEvents[request.status];
-
-  if (statusEvent) {
-    events.push({
-      eventKey: `${request._id}:status:${request.status}`,
-      ...statusEvent,
-      createdAt: request.updatedAt || request.createdAt,
-    });
-  }
-
-  return events;
-};
-
-// Get customer notifications.
-export const getNotifications = async (req, res) => {
+// Helper function to create notification with duplicate check
+export const createWorkflowNotification = async ({
+  recipient,
+  sender = null,
+  serviceRequest = null,
+  title,
+  message,
+  type,
+}) => {
   try {
-    const requests = await ServiceRequest.find({
-      customer: req.user,
-    })
-      .select("problem status createdAt updatedAt")
-      .sort({ createdAt: -1 });
+    if (!recipient || !title || !message) return null;
 
-    const notificationRecords = requests.flatMap((request) =>
-      getEventsForRequest(request).map((event) => ({
-        customer: req.user,
-        serviceRequest: request._id,
-        ...event,
-      }))
-    );
-
-    if (notificationRecords.length) {
-      await Notification.bulkWrite(
-        notificationRecords.map((record) => ({
-          updateOne: {
-            filter: {
-              customer: record.customer,
-              eventKey: record.eventKey,
-            },
-            update: { $setOnInsert: record },
-            upsert: true,
-          },
-        })),
-        { ordered: false }
-      );
+    // Prevent duplicate notification for the same event
+    if (serviceRequest && type) {
+      const existing = await Notification.findOne({
+        recipient,
+        serviceRequest,
+        type,
+      });
+      if (existing) {
+        return existing;
+      }
     }
 
+    const notification = await Notification.create({
+      recipient,
+      customer: recipient,
+      sender,
+      serviceRequest,
+      title,
+      message,
+      type,
+      isRead: false,
+    });
+
+    // Real-time socket emission to the recipient user
+    emitToUser(recipient, "new_notification", notification);
+
+    return notification;
+  } catch (error) {
+    console.error("Create workflow notification error:", error);
+    return null;
+  }
+};
+
+// Get notifications for current user (customer or mechanic)
+export const getNotifications = async (req, res) => {
+  try {
+    const userId = req.user;
+
     const notifications = await Notification.find({
-      customer: req.user,
+      $or: [{ recipient: userId }, { customer: userId }],
     })
+      .populate("sender", "fullName role")
+      .populate("serviceRequest", "problem status location")
       .sort({ createdAt: -1 })
+      .limit(50)
       .lean();
 
     return res.status(200).json({
       success: true,
       count: notifications.length,
-      unreadCount: notifications.filter(
-        (item) => !item.isRead
-      ).length,
       notifications,
     });
   } catch (error) {
     console.error("Get notifications error:", error);
-
     return res.status(500).json({
       success: false,
       message: "Unable to fetch notifications.",
@@ -117,13 +75,22 @@ export const getNotifications = async (req, res) => {
   }
 };
 
-// Mark one notification as read.
+// Mark single notification as read
 export const markNotificationAsRead = async (req, res) => {
   try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid notification ID.",
+      });
+    }
+
     const notification = await Notification.findOneAndUpdate(
       {
-        _id: req.params.id,
-        customer: req.user,
+        _id: id,
+        $or: [{ recipient: req.user }, { customer: req.user }],
       },
       { $set: { isRead: true } },
       { new: true }
@@ -142,7 +109,6 @@ export const markNotificationAsRead = async (req, res) => {
     });
   } catch (error) {
     console.error("Mark notification as read error:", error);
-
     return res.status(500).json({
       success: false,
       message: "Unable to update notification.",
@@ -150,12 +116,12 @@ export const markNotificationAsRead = async (req, res) => {
   }
 };
 
-// Mark all notifications as read.
+// Mark all notifications as read for current user
 export const markAllNotificationsAsRead = async (req, res) => {
   try {
-    const result = await Notification.updateMany(
+    await Notification.updateMany(
       {
-        customer: req.user,
+        $or: [{ recipient: req.user }, { customer: req.user }],
         isRead: false,
       },
       { $set: { isRead: true } }
@@ -163,15 +129,13 @@ export const markAllNotificationsAsRead = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      modifiedCount: result.modifiedCount,
       message: "All notifications marked as read.",
     });
   } catch (error) {
     console.error("Mark all notifications as read error:", error);
-
     return res.status(500).json({
       success: false,
-      message: "Unable to update notifications.",
+      message: "Unable to mark notifications as read.",
     });
   }
 };

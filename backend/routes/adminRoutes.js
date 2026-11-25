@@ -1,23 +1,21 @@
-
 import express from "express";
 
 import {
   adminLogin,
   getAdminMe,
   getAdminDashboard,
-   getAdminMechanics,
+  getAdminServiceRequests,
+  getAdminMechanics,
   approveMechanic,
   rejectMechanic,
   getAdminCustomers,
-getAdminCustomerById,
-updateCustomerStatus,
-getAdminMechanicById,
+  getAdminCustomerById,
+  updateCustomerStatus,
+  getAdminMechanicById,
 } from "../controller/adminController.js";
 import { getAdminReviews } from "../controller/reviewController.js";
 
-import {
-  protectAdmin,
-} from "../middleware/adminMiddleware.js";
+import { protectAdmin } from "../middleware/adminMiddleware.js";
 
 const router = express.Router();
 
@@ -32,6 +30,7 @@ router.get("/me", getAdminMe);
 
 // Admin Dashboard
 router.get("/dashboard", getAdminDashboard);
+router.get("/service-requests", getAdminServiceRequests);
 router.get("/reviews", getAdminReviews);
 
 // Mechanic verification
@@ -49,6 +48,5 @@ router.get("/customers/:id", getAdminCustomerById);
 router.patch("/customers/:id/status", updateCustomerStatus);
 
 router.get("/mechanics/:id", getAdminMechanicById);
-
 
 export default router;

@@ -88,6 +88,12 @@ function AdminVerification() {
 
   useEffect(() => {
     loadApplications();
+
+    const searchParams = new URLSearchParams(window.location.search);
+    const targetId = searchParams.get("id");
+    if (targetId) {
+      handleViewDetails(targetId);
+    }
   }, [loadApplications]);
 
   // Search mechanics

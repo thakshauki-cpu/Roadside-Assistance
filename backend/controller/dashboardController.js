@@ -40,8 +40,15 @@ export const getDashboardData = async (req, res) => {
       "searching",
       "assigned",
       "accepted",
+      "inspection_fee_submitted",
+      "inspection_paid",
       "on_the_way",
-      "in_progress",
+      "arrived",
+      "inspecting",
+      "inspection_completed",
+      "quotation_submitted",
+      "repair_in_progress",
+      "repair_completed",
     ];
 
     const activeRequests = await ServiceRequest.countDocuments({

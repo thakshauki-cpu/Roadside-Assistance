@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Search,
   Star,
@@ -28,6 +29,7 @@ import "../styles/FindMechanic.css";
 const filters = ["All Services", "Tyre Repair", "Battery", "Towing"];
 
 function FindMechanic() {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState("All Services");
   const [selectedId, setSelectedId] = useState(null);
@@ -89,9 +91,21 @@ function FindMechanic() {
       return;
     }
 
-    alert(
-      `Selected mechanic: ${mechanic.businessName}. Dispatch API will be connected later.`
+    const currentRequest = JSON.parse(
+      localStorage.getItem("serviceRequest") || "{}"
     );
+    localStorage.setItem(
+      "serviceRequest",
+      JSON.stringify({
+        ...currentRequest,
+        preferredMechanic: {
+          id: mechanic._id,
+          name: mechanic.businessName,
+          phone: mechanic.phone,
+        },
+      })
+    );
+    navigate("/get-help/location");
   };
 
   return (

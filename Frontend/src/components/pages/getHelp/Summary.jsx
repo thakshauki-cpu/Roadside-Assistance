@@ -15,6 +15,8 @@ import {
   ReceiptText,
   Download,
   Headset,
+  AlertCircle,
+  FileCheck,
 } from "lucide-react";
 
 import DashboardSidebar from "../../Dashboard/Sidebar";
@@ -26,7 +28,7 @@ import {
   getCustomerReview,
   getServiceSummary,
   submitCustomerReview,
-  submitMockPayment,
+  payRepairFee,
 } from "../../../api/getHelp";
 import {
   formatRs,
@@ -36,18 +38,14 @@ import {
 } from "./requestSampleData";
 import "../../styles/GetHelp.css";
 import "../../styles/Summary.css";
-import mechanicImage from "../../../assets/mechanic1.PNG";
 
 const paymentMethods = [
-  { id: "cash", name: "Cash", text: "Hand over cash on-site", icon: Banknote },
-  { id: "card", name: "Card POS", text: "Visa / Mastercard / LankaPay", icon: CreditCard },
-  { id: "qr", name: "QR / Digital", text: "FriMi, Koko, Genie & LANKAQR", icon: QrCode },
+  { id: "cash", name: "Cash (Demo)", text: "Simulate cash handover on-site", icon: Banknote },
+  { id: "card", name: "Card (Demo)", text: "Visa / Mastercard Simulation", icon: CreditCard },
+  { id: "qr", name: "LankaQR (Demo)", text: "LANKAQR Digital Simulation", icon: QrCode },
 ];
 
-// Words shown under the stars
 const ratingWords = ["", "Poor", "Fair", "Good", "Very Good", "Exceptional Service"];
-
-// Tip buttons (0 means "No Tip")
 const tipOptions = [0, 200, 500];
 
 function Summary() {
@@ -61,17 +59,16 @@ function Summary() {
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Things the customer can change on this page
-  const [payment, setPayment] = useState("cash");
+  const [payment, setPayment] = useState("card");
   const [rating, setRating] = useState(5);
   const [review, setReview] = useState("");
-  const [tip, setTip] = useState(200); // change 200 to 0 for "No Tip" at the start
+  const [tip, setTip] = useState(0);
   const [customOpen, setCustomOpen] = useState(false);
-  const [paymentSubmitted, setPaymentSubmitted] = useState(false);
   const [reviewRecord, setReviewRecord] = useState(null);
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [reviewError, setReviewError] = useState("");
   const [reviewSuccess, setReviewSuccess] = useState("");
+  const [showDemoConfirm, setShowDemoConfirm] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -80,15 +77,17 @@ function Summary() {
         if (!requestId) {
           throw new Error("Your service request is missing. Please submit it again.");
         }
-        const [assignmentData, completionData, reviewData] = await Promise.all([
+        const [assignmentData, completionData, reviewData, summaryData] = await Promise.all([
           getAssignment(requestId),
           getCompletion(requestId),
-          getCustomerReview(requestId),
+          getCustomerReview(requestId).catch(() => ({ review: null })),
+          getServiceSummary(requestId).catch(() => null),
         ]);
         if (active) {
           setAssignment(assignmentData);
           setCompletion(completionData.completion);
-          if (reviewData.review) {
+          if (summaryData) setSummary(summaryData);
+          if (reviewData?.review) {
             setReviewRecord(reviewData.review);
             setRating(reviewData.review.rating);
             setReview(reviewData.review.comment);
@@ -107,105 +106,66 @@ function Summary() {
     };
   }, [requestId]);
 
-  const mechanic =
-    summary?.mechanic || completion?.mechanic || assignment?.mechanic;
-  const quotation = summary?.quotation || assignment?.quotation;
-  const issueName = summary?.problem || createdRequest.problem || "Service request";
-  const issueTitle = completion?.problemTitle || issueName;
-  const issueWork = completion?.workCompleted || "";
-  const description =
-    summary?.description || createdRequest.description || "";
-  const vehicleData = summary?.vehicle || draft.vehicle || {};
-  const vehicleLabel = vehicleData.registrationNumber
-    ? `${vehicleData.model || vehicleData.vehicleType} (${vehicleData.registrationNumber})`
-    : vehicleData.model || vehicleData.vehicleType || "Vehicle";
-  const place =
-    summary?.location?.address ||
-    createdRequest.location?.address ||
-    draft.location?.address ||
-    "Location";
-  const labour = quotation?.labour || 0;
-  const parts = quotation?.parts || 0;
-  const additionalCharges = quotation?.additionalCharges || 0;
-  const serviceTotal = quotation?.total || labour + parts + additionalCharges;
-  const completedDate = completion?.completedAt
-    ? new Date(completion.completedAt)
-    : null;
-  const completedAt = completedDate
-    ? completedDate.toLocaleTimeString("en-US", {
-        hour: "numeric",
-        minute: "2-digit",
-      })
-    : "";
-  const completedOn = completedDate
-    ? completedDate.toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      })
-    : "";
+  const mechanic = summary?.mechanic || completion?.mechanic || assignment?.mechanic || {};
+  const status = summary?.status || assignment?.status || "completed";
+  const isRepairRejected = status === "repair_rejected" || summary?.repairQuotation?.status === "rejected";
+  const isRepairPaid = summary?.repairPayment?.status === "paid" || status === "completed";
 
-  const grandTotal = summary?.payment?.amount || serviceTotal + tip;
+  const inspectionFeeAmount = summary?.inspectionFee?.totalAmount || assignment?.inspectionFee?.totalAmount || 2000;
+  const inspectionPayment = summary?.inspectionPayment || assignment?.inspectionPayment || {};
 
-  // Typing a custom tip: keep digits only
-  const handleCustomTip = (event) => {
-    const digits = event.target.value.replace(/\D/g, "");
-    setTip(digits === "" ? 0 : Number(digits));
-  };
+  const labour = summary?.repairQuotation?.labourCharge || 0;
+  const parts = summary?.repairQuotation?.partsCharge || 0;
+  const additionalCharges = summary?.repairQuotation?.additionalCharges || 0;
+  const repairBaseTotal = summary?.repairQuotation?.totalAmount || labour + parts + additionalCharges;
+  const grandTotal = isRepairRejected ? 0 : repairBaseTotal + tip;
 
-  // The browser print window lets the user save the page as a PDF
-  const handleDownload = () => window.print();
+  const completedDate = completion?.completedAt ? new Date(completion.completedAt) : new Date();
+  const completedAt = completedDate.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  const completedOn = completedDate.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 
-  const loadSummary = async () => {
-    try {
-      setError("");
-      const summaryData = await getServiceSummary(requestId);
-      setSummary(summaryData);
-    } catch (summaryError) {
-      setError(`Payment is confirmed, but the service summary could not load: ${summaryError.message}`);
-    }
-  };
-
-  const handlePay = async () => {
+  const handlePayRepair = async () => {
     try {
       setPaymentLoading(true);
       setError("");
-      await submitMockPayment(requestId, {
+      await payRepairFee(requestId, {
         paymentMethod: payment,
         tip,
       });
-      setPaymentSubmitted(true);
-      await loadSummary();
-    } catch (paymentError) {
-      setError(paymentError.message);
+      setShowDemoConfirm(false);
+      // Reload summary
+      const updatedSummary = await getServiceSummary(requestId);
+      setSummary(updatedSummary);
+    } catch (err) {
+      setError(err.message || "Failed to process repair demo payment.");
     } finally {
       setPaymentLoading(false);
     }
   };
 
   const handleSubmitReview = async () => {
-    if (!review.trim()) {
-      setReviewError("Please write a review before submitting.");
-      return;
-    }
-
     try {
       setReviewSubmitting(true);
       setReviewError("");
       setReviewSuccess("");
-      const result = await submitCustomerReview(requestId, { rating, comment: review });
+      const result = await submitCustomerReview(requestId, {
+        rating,
+        comment: review.trim() || "Good service.",
+      });
       setReviewRecord(result.review);
-      setReviewSuccess(result.message);
-    } catch (submitError) {
-      setReviewError(submitError.message);
+      setReviewSuccess(result.message || "Thank you! Review saved successfully.");
+    } catch (err) {
+      setReviewError(err.message || "Failed to save review.");
     } finally {
       setReviewSubmitting(false);
     }
   };
 
-  const isCustomTip = customOpen || !tipOptions.includes(tip);
+  const handleDownload = () => {
+    window.print();
+  };
 
-  if (loading || !completion || !assignment || !mechanic || !quotation) {
+  if (loading || !assignment) {
     return (
       <div className="gethelp-page">
         <DashboardSidebar activeItem="My Requests" />
@@ -215,7 +175,7 @@ function Summary() {
             {error ? (
               <p className="form-error" role="alert">{error}</p>
             ) : (
-              <p role="status">Loading service completion and quotation...</p>
+              <p role="status">Loading service invoice summary...</p>
             )}
           </div>
         </main>
@@ -224,357 +184,380 @@ function Summary() {
   }
 
   return (
-    <div className="gethelp-page">
+    <div className="gethelp-page summary-page">
       <DashboardSidebar activeItem="My Requests" />
 
       <main className="gethelp-main">
         <DashboardTopbar />
 
         <div className="gethelp-content">
+          <div className="summary-strip">
+            <span className="summary-chip green">● Invoice &amp; Settlement</span>
+            <span>{draft.location?.address || "Breakdown Location"}</span>
+            <strong className="summary-step">
+              <ShieldCheck size={13} /> {assignment.requestReference}
+            </strong>
+          </div>
+
           <RequestStepper currentStep={6} />
 
-          {/* Success banner */}
-          <section className="done-banner">
-            <span className="done-check-outer">
-              <span className="done-check-inner">
-                <Check size={30} />
-              </span>
-            </span>
-
+          {/* Banner */}
+          <div className="summary-banner">
+            <div className="summary-banner-badge">
+              <Check size={28} />
+            </div>
             <div>
-              <div className="done-title-row">
-                <h1>Service Completed</h1>
-                <span className="done-verified">
-                  <span className="done-verified-dot" /> {completion.status}
-                </span>
-              </div>
-              <p className="done-text">
-                <strong>{mechanic.name}</strong> has completed your roadside repair successfully on {place}.
+              <h1>
+                {isRepairRejected
+                  ? "Service Concluded (Quotation Rejected)"
+                  : isRepairPaid
+                  ? "Service Completed & Fully Settled"
+                  : "Repair Finished – Ready for Settlement"}
+              </h1>
+              <p>
+                Request #{assignment.requestReference} · {completedOn} at {completedAt}
               </p>
-              <p className="done-meta">
-                <Clock size={13} /> Completed {completedOn}, {completedAt} <span>•</span> Response Time: {completion.responseTimeMinutes} mins <span>•</span>{" "}
-                {mechanic.depot}
-              </p>
-            </div>
-          </section>
-
-          <div className="done-grid">
-            {/* ===== Left column ===== */}
-            <div className="done-left">
-              {/* Job summary */}
-              <section className="gethelp-card done-card">
-                <div className="done-card-head">
-                  <h2>
-                    <ClipboardList size={18} /> Job &amp; Service Summary
-                  </h2>
-                  <span className="done-invoice">
-                    {summary?.requestReference || completion.requestReference}
-                  </span>
-                </div>
-
-                <div className="done-two">
-                  <div className="done-tile">
-                    <small>Reported Problem</small>
-                    <div className="done-tile-row">
-                      <CircleDot size={18} className="done-red" />
-                      <div>
-                        <strong>{completion.problemTitle || issueTitle}</strong>
-                        <p>{issueWork}</p>
-                        {description && <p>{description}</p>}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="done-tile">
-                    <small>Vehicle &amp; Location</small>
-                    <div className="done-tile-row">
-                      <CarFront size={18} className="done-blue" />
-                      <div>
-                        <strong>{vehicleLabel}</strong>
-                        <p>{place}</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Mechanic row */}
-                <div className="done-mechanic">
-                  <div className="done-mechanic-left">
-                    {mechanicImage ? (
-                      <img className="done-photo" src={mechanicImage} alt={mechanic.name} />
-                    ) : (
-                      <span className="done-photo done-photo-missing">
-                        {mechanic.name.slice(0, 2).toUpperCase()}
-                      </span>
-                    )}
-                    <div>
-                      <strong>
-                        {mechanic.name} <BadgeCheck size={16} className="done-green" />
-                      </strong>
-                      <p>{mechanic.depot}</p>
-                      <span className="done-stars">
-                        <Star size={12} fill="currentColor" /> <b>{mechanic.rating}</b> ({mechanic.rescues} roadside jobs)
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="done-mechanic-right">
-                    <span className="done-dispatch">On-Site Dispatch</span>
-                    <small>{mechanic.unit}</small>
-                  </div>
-                </div>
-
-                {/* Price lines */}
-                <div className="done-prices">
-                  <div>
-                  <span>Labour</span>
-                    <b>{formatRs(labour)}</b>
-                  </div>
-                  <div>
-                  <span>Parts &amp; Materials</span>
-                    <b>{formatRs(parts)}</b>
-                  </div>
-                {additionalCharges > 0 && (
-                  <div className="done-small">
-                    <span>Additional Charges</span>
-                    <b>{formatRs(additionalCharges)}</b>
-                  </div>
-                )}
-                <div className="done-small">
-                  <span>Service Estimate</span>
-                  <b className="done-green">{quotation.estimatedServiceMinutes} mins</b>
-                  </div>
-                  {tip > 0 && (
-                    <div className="done-small">
-                      <span>Tip for {mechanic.name.split(" ")[0]}</span>
-                      <b>{formatRs(tip)}</b>
-                    </div>
-                  )}
-                  <hr />
-                  <div className="done-total">
-                    <div>
-                      <strong>Total Amount Due</strong>
-                      <small>Mock quotation total plus selected tip</small>
-                    </div>
-                    <span>{formatRs(grandTotal)}</span>
-                  </div>
-                </div>
-              </section>
-
-              {/* Payment method */}
-              <section className="gethelp-card done-card">
-                <div className="done-card-head done-card-head-plain">
-                  <h2>
-                    <CreditCard size={18} /> Select Payment Method
-                  </h2>
-                  <span className="done-zero">
-                    {additionalCharges > 0
-                      ? `${formatRs(additionalCharges)} additional charges`
-                      : "No additional charges"}
-                  </span>
-                </div>
-
-                <p className="done-help">
-                  Choose how you wish to settle this repair directly with {mechanic.name}. This mock payment provides an instant
-                  verified digital tax receipt.
-                </p>
-
-                <div className="done-pay-grid">
-                  {paymentMethods.map((method) => {
-                    const Icon = method.icon;
-                    return (
-                      <label key={method.id} className={"done-pay " + (payment === method.id ? "selected" : "")}>
-                        <span className="done-pay-top">
-                          <Icon size={22} />
-                          <input
-                            type="radio"
-                            name="payment"
-                            value={method.id}
-                            checked={payment === method.id}
-                            onChange={() => setPayment(method.id)}
-                          />
-                        </span>
-                        <strong>{method.name}</strong>
-                        <small>{method.text}</small>
-                      </label>
-                    );
-                  })}
-                </div>
-
-                <p className="done-secure">
-                  <ShieldCheck size={14} /> Mock settlement • Request {summary?.requestReference || completion.requestReference}
-                </p>
-                {summary?.payment && (
-                  <p className="done-secure" role="status">
-                    Mock payment {summary.payment.status} by {summary.payment.method.toUpperCase()}.
-                    Confirmation: {summary.payment.confirmationCode}
-                  </p>
-                )}
-              </section>
-            </div>
-
-            {/* ===== Right column: rating ===== */}
-            <div className="done-right">
-              <section className="gethelp-card done-card">
-                <h2 className="done-rate-title">
-                  <MessageSquareQuote size={18} /> Rate Your Experience
-                </h2>
-                <p className="done-help done-help-tight">How was {mechanic.name}'s service today?</p>
-
-                <div className="done-snapshot">
-                  {mechanicImage ? (
-                    <img className="done-photo done-photo-small" src={mechanicImage} alt={mechanic.name} />
-                  ) : (
-                    <span className="done-photo done-photo-small done-photo-missing">
-                      {mechanic.name.slice(0, 2).toUpperCase()}
-                    </span>
-                  )}
-                  <div>
-                    <strong>{mechanic.name}</strong>
-                    <p>
-                      <span className="done-green">Arrived in {completion.responseTimeMinutes} mins</span> • {completion.problemTitle}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Stars */}
-                <div className="done-rating-box">
-                  <small>Tap to rate mechanic</small>
-                  <div className="done-star-row">
-                    {[1, 2, 3, 4, 5].map((number) => (
-                      <button
-                        key={number}
-                        type="button"
-                        aria-label={number + " star" + (number > 1 ? "s" : "")}
-                        className={number <= rating ? "on" : ""}
-                        onClick={() => setRating(number)}
-                        disabled={Boolean(reviewRecord)}
-                      >
-                        <Star size={28} fill={number <= rating ? "currentColor" : "none"} />
-                      </button>
-                    ))}
-                  </div>
-                  <strong>
-                    {rating.toFixed(1)} • {ratingWords[rating]}
-                  </strong>
-                </div>
-
-                {/* Review */}
-                <label className="done-label" htmlFor="review">
-                  Written review for {mechanic.name}
-                </label>
-                <textarea
-                  id="review"
-                  className="done-textarea"
-                  placeholder="e.g. Arrived quickly and repaired the tyre neatly."
-                  value={review}
-                  onChange={(event) => setReview(event.target.value)}
-                  maxLength={1000}
-                  disabled={Boolean(reviewRecord)}
-                />
-                {!reviewRecord && (
-                  <button
-                    type="button"
-                    className="gh-next-button done-review-submit"
-                    onClick={handleSubmitReview}
-                    disabled={reviewSubmitting}
-                  >
-                    {reviewSubmitting ? "Submitting review..." : "Submit Review"}
-                  </button>
-                )}
-                {reviewSuccess && <p className="done-review-success" role="status">{reviewSuccess}</p>}
-                {reviewRecord && !reviewSuccess && (
-                  <p className="done-review-success" role="status">You have already reviewed this completed service.</p>
-                )}
-                {reviewError && <p className="form-error" role="alert">{reviewError}</p>}
-
-                {/* Tip */}
-                <div className="done-tip-top">
-                  <span className="done-label">Add a tip for {mechanic.name} (Optional)</span>
-                  <span className="done-green">100% goes to mechanic</span>
-                </div>
-                <div className="done-tip-row">
-                  {tipOptions.map((amount) => (
-                    <button
-                      key={amount}
-                      type="button"
-                      className={tip === amount && !customOpen ? "on" : ""}
-                      onClick={() => {
-                        setTip(amount);
-                        setCustomOpen(false);
-                      }}
-                    >
-                      {amount === 0 ? "No Tip" : "+Rs. " + amount}
-                    </button>
-                  ))}
-                  <button type="button" className={isCustomTip ? "on" : ""} onClick={() => setCustomOpen(true)}>
-                    Custom
-                  </button>
-                </div>
-
-                {customOpen && (
-                  <input
-                    className="done-custom-tip"
-                    type="text"
-                    inputMode="numeric"
-                    placeholder="Enter tip amount (Rs.)"
-                    value={tip === 0 ? "" : tip}
-                    onChange={handleCustomTip}
-                  />
-                )}
-              </section>
             </div>
           </div>
 
-          {/* Settlement bar */}
-          <section className="done-bar">
-            <div className="done-bar-left">
-              <span className="done-bar-icon">
-                <ReceiptText size={20} />
-              </span>
-              <div>
-                <strong>Settlement Ready</strong>
-                <p>A mock payment confirmation will be generated for this demo request.</p>
+          <div className="summary-grid">
+            {/* Left Column: Two Invoices (Inspection + Repair) */}
+            <div className="summary-left">
+              {/* Invoice 1: Inspection Fee */}
+              <section className="gethelp-card" style={{ marginBottom: "18px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
+                  <h3 style={{ margin: 0, fontSize: "16px", color: "#1e293b", display: "flex", alignItems: "center", gap: "8px" }}>
+                    <ReceiptText size={18} color="#15803d" />
+                    1. Inspection Fee Invoice
+                  </h3>
+                  <span style={{ background: "#ecfdf5", color: "#15803d", fontWeight: "bold", padding: "4px 10px", borderRadius: "12px", fontSize: "12px" }}>
+                    ✓ PAID (DEMO)
+                  </span>
+                </div>
+
+                <div className="quotation-box" style={{ background: "#f8fafc", padding: "14px", borderRadius: "10px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px", fontSize: "13px" }}>
+                    <span>Travelling Charge:</span>
+                    <strong>{formatRs(summary?.inspectionFee?.travelFee || 500)}</strong>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px", fontSize: "13px" }}>
+                    <span>Location Visit Fee:</span>
+                    <strong>{formatRs(summary?.inspectionFee?.visitFee || 500)}</strong>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px", fontSize: "13px" }}>
+                    <span>Diagnostic Inspection:</span>
+                    <strong>{formatRs(summary?.inspectionFee?.inspectionCharge || 1000)}</strong>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", paddingTop: "8px", borderTop: "1px dashed #cbd5e1", fontSize: "14px", fontWeight: "bold" }}>
+                    <span>Total Inspection Fee:</span>
+                    <span style={{ color: "#15803d" }}>{formatRs(inspectionFeeAmount)}</span>
+                  </div>
+                  {summary?.inspectionPayment?.transactionId && (
+                    <small style={{ display: "block", marginTop: "6px", color: "#64748b", fontSize: "11px" }}>
+                      Transaction ID: {summary.inspectionPayment.transactionId}
+                    </small>
+                  )}
+                </div>
+              </section>
+
+              {/* Invoice 2: Repair Fee */}
+              <section className="gethelp-card">
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
+                  <h3 style={{ margin: 0, fontSize: "16px", color: "#1e293b", display: "flex", alignItems: "center", gap: "8px" }}>
+                    <Wrench size={18} color="#2563eb" />
+                    2. Repair &amp; Parts Invoice
+                  </h3>
+                  <span
+                    style={{
+                      background: isRepairRejected ? "#fef2f2" : isRepairPaid ? "#ecfdf5" : "#eff6ff",
+                      color: isRepairRejected ? "#dc2626" : isRepairPaid ? "#15803d" : "#2563eb",
+                      fontWeight: "bold",
+                      padding: "4px 10px",
+                      borderRadius: "12px",
+                      fontSize: "12px",
+                    }}
+                  >
+                    {isRepairRejected ? "REJECTED" : isRepairPaid ? "✓ PAID (DEMO)" : "PENDING DEMO PAYMENT"}
+                  </span>
+                </div>
+
+                {isRepairRejected ? (
+                  <div style={{ background: "#fef2f2", padding: "14px", borderRadius: "10px", border: "1px solid #fecaca" }}>
+                    <p style={{ margin: 0, color: "#991b1b", fontSize: "13px" }}>
+                      You rejected the repair quotation. No repair work was conducted, and no repair charges are due.
+                    </p>
+                  </div>
+                ) : (
+                  <div>
+                    <div className="quotation-box" style={{ background: "#f8fafc", padding: "14px", borderRadius: "10px", marginBottom: "14px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px", fontSize: "13px" }}>
+                        <span>Labour Charge:</span>
+                        <strong>{formatRs(labour)}</strong>
+                      </div>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px", fontSize: "13px" }}>
+                        <span>Parts Replacement:</span>
+                        <strong>{formatRs(parts)}</strong>
+                      </div>
+                      {additionalCharges > 0 && (
+                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px", fontSize: "13px" }}>
+                          <span>Additional Charges:</span>
+                          <strong>{formatRs(additionalCharges)}</strong>
+                        </div>
+                      )}
+                      {tip > 0 && (
+                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px", fontSize: "13px" }}>
+                          <span>Technician Tip:</span>
+                          <strong>{formatRs(tip)}</strong>
+                        </div>
+                      )}
+                      <div style={{ display: "flex", justifyContent: "space-between", paddingTop: "8px", borderTop: "1px dashed #cbd5e1", fontSize: "15px", fontWeight: "bold" }}>
+                        <span>Total Repair Due:</span>
+                        <span style={{ color: "#2563eb" }}>{formatRs(grandTotal)}</span>
+                      </div>
+                      {summary?.repairPayment?.transactionId && (
+                        <small style={{ display: "block", marginTop: "6px", color: "#64748b", fontSize: "11px" }}>
+                          Transaction ID: {summary.repairPayment.transactionId}
+                        </small>
+                      )}
+                    </div>
+
+                    {!isRepairPaid && (
+                      <div>
+                        {/* Demo Payment method selection */}
+                        <strong style={{ display: "block", fontSize: "13px", marginBottom: "8px", color: "#334155" }}>
+                          Select Demo Payment Method:
+                        </strong>
+                        <div className="settlement-chips" style={{ marginBottom: "14px" }}>
+                          {paymentMethods.map((m) => (
+                            <span
+                              key={m.id}
+                              onClick={() => setPayment(m.id)}
+                              style={{
+                                cursor: "pointer",
+                                border: payment === m.id ? "2px solid #2563eb" : "1px solid #e2e8f0",
+                                background: payment === m.id ? "#eff6ff" : "#fff",
+                                fontWeight: payment === m.id ? "bold" : "normal",
+                              }}
+                            >
+                              <m.icon size={14} /> {m.name}
+                            </span>
+                          ))}
+                        </div>
+
+                        {/* Optional tip */}
+                        <div style={{ marginBottom: "16px" }}>
+                          <span style={{ fontSize: "12px", color: "#64748b", display: "block", marginBottom: "6px" }}>
+                            Add Mechanic Tip (Demo):
+                          </span>
+                          <div style={{ display: "flex", gap: "8px" }}>
+                            {tipOptions.map((t) => (
+                              <button
+                                key={t}
+                                type="button"
+                                className={`gh-back-button ${tip === t ? "active" : ""}`}
+                                style={{ padding: "6px 12px", fontSize: "12px", border: tip === t ? "2px solid #2563eb" : "" }}
+                                onClick={() => setTip(t)}
+                              >
+                                {t === 0 ? "No Tip" : `+${formatRs(t)}`}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {error && <p className="form-error" role="alert" style={{ marginBottom: "12px" }}>{error}</p>}
+
+                        <button
+                          type="button"
+                          className="gh-next-button"
+                          style={{ width: "100%", justifyContent: "center", padding: "14px", fontSize: "15px" }}
+                          onClick={() => setShowDemoConfirm(true)}
+                          disabled={paymentLoading}
+                        >
+                          Confirm Final Repair Demo Payment - {formatRs(grandTotal)}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </section>
+            </div>
+
+            {/* Right Column: Rating & Review */}
+            <div className="summary-right">
+              {/* Review card */}
+              <section className="gethelp-card">
+                <h3 style={{ margin: "0 0 12px", fontSize: "16px", color: "#1e293b", display: "flex", alignItems: "center", gap: "6px" }}>
+                  <Star size={18} color="#f59e0b" /> Rate Mechanic Experience
+                </h3>
+
+                <p style={{ fontSize: "13px", color: "#64748b", margin: "0 0 12px" }}>
+                  How satisfied are you with {mechanic.name || "the technician"}'s service?
+                </p>
+
+                <div style={{ display: "flex", gap: "6px", marginBottom: "8px" }}>
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      style={{ background: "none", border: "none", cursor: "pointer", padding: "2px" }}
+                      onClick={() => setRating(star)}
+                    >
+                      <Star
+                        size={28}
+                        fill={star <= rating ? "#f59e0b" : "#e2e8f0"}
+                        color={star <= rating ? "#f59e0b" : "#cbd5e1"}
+                      />
+                    </button>
+                  ))}
+                </div>
+                <small style={{ color: "#f59e0b", fontWeight: "bold", display: "block", marginBottom: "12px" }}>
+                  {ratingWords[rating]}
+                </small>
+
+                <textarea
+                  rows="3"
+                  placeholder="Share details of your experience (e.g. quick arrival, polite behavior)..."
+                  value={review}
+                  onChange={(e) => setReview(e.target.value)}
+                  style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "13px", marginBottom: "10px" }}
+                />
+
+                {reviewError && <p className="form-error" role="alert" style={{ fontSize: "12px" }}>{reviewError}</p>}
+                {reviewSuccess && <p className="done-green" style={{ fontSize: "12px", color: "#15803d" }}>✓ {reviewSuccess}</p>}
+
+                <button
+                  type="button"
+                  className="gh-next-button"
+                  style={{ width: "100%", justifyContent: "center" }}
+                  onClick={handleSubmitReview}
+                  disabled={reviewSubmitting}
+                >
+                  {reviewSubmitting ? "Submitting..." : reviewRecord ? "Update Review" : "Submit Review"}
+                </button>
+              </section>
+
+              {/* Print Receipt Button */}
+              <div style={{ marginTop: "16px" }}>
+                <button
+                  type="button"
+                  className="gh-back-button"
+                  style={{ width: "100%", justifyContent: "center" }}
+                  onClick={handleDownload}
+                >
+                  <Download size={16} /> Print / Save PDF Receipt
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      {/* Demo Payment Modal Confirmation */}
+      {showDemoConfirm && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            background: "rgba(10, 20, 40, 0.6)",
+            display: "grid",
+            placeItems: "center",
+            zIndex: 9999,
+            padding: "20px",
+          }}
+        >
+          <div
+            style={{
+              background: "#fff",
+              borderRadius: "16px",
+              maxWidth: "460px",
+              width: "100%",
+              padding: "28px",
+              boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
+              textAlign: "center",
+            }}
+          >
+            <div
+              style={{
+                width: "56px",
+                height: "56px",
+                background: "#e0f2fe",
+                color: "#0284c7",
+                borderRadius: "50%",
+                display: "grid",
+                placeItems: "center",
+                margin: "0 auto 16px",
+              }}
+            >
+              <CreditCard size={28} />
+            </div>
+
+            <h3 style={{ fontSize: "20px", margin: "0 0 8px", color: "#0f172a" }}>
+              DEMO REPAIR PAYMENT
+            </h3>
+
+            <p style={{ fontSize: "13px", color: "#64748b", margin: "0 0 16px", lineHeight: "1.5" }}>
+              This is a <strong>DEMO payment simulation</strong>. <strong>No real money</strong> is charged.
+            </p>
+
+            <div
+              style={{
+                background: "#f8fafc",
+                borderRadius: "10px",
+                padding: "16px",
+                textAlign: "left",
+                marginBottom: "20px",
+                border: "1px solid #e2e8f0",
+                fontSize: "13px",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
+                <span>Repair Fee:</span>
+                <strong>{formatRs(repairBaseTotal)}</strong>
+              </div>
+              {tip > 0 && (
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
+                  <span>Tip:</span>
+                  <strong>{formatRs(tip)}</strong>
+                </div>
+              )}
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
+                <span>Method:</span>
+                <strong style={{ textTransform: "capitalize" }}>Demo {payment}</strong>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", paddingTop: "8px", borderTop: "1px dashed #cbd5e1", fontSize: "15px" }}>
+                <strong>Total Demo Charge:</strong>
+                <strong style={{ color: "#0284c7" }}>{formatRs(grandTotal)}</strong>
               </div>
             </div>
 
-            <div className="done-bar-right">
-              <button type="button" className="done-download" onClick={handleDownload}>
-                <Download size={14} /> Download Invoice PDF
+            <div style={{ display: "flex", gap: "10px" }}>
+              <button
+                type="button"
+                className="gh-back-button"
+                style={{ flex: 1, justifyContent: "center" }}
+                onClick={() => setShowDemoConfirm(false)}
+                disabled={paymentLoading}
+              >
+                Cancel
               </button>
               <button
                 type="button"
                 className="gh-next-button"
-                onClick={handlePay}
-                disabled={paymentSubmitted || paymentLoading}
+                style={{ flex: 2, justifyContent: "center" }}
+                onClick={handlePayRepair}
+                disabled={paymentLoading}
               >
-                <Check size={16} />
-                {paymentLoading
-                  ? "Processing mock payment..."
-                  : paymentSubmitted
-                  ? "Payment Confirmed"
-                  : "Pay & Submit (" + formatRs(grandTotal) + ")"}
+                {paymentLoading ? "Processing..." : "Confirm Demo Payment"}
               </button>
-              {paymentSubmitted && !summary && (
-                <button
-                  type="button"
-                  className="done-download"
-                  onClick={loadSummary}
-                >
-                  Retry loading summary
-                </button>
-              )}
             </div>
-          </section>
-
-          {error && <p className="form-error" role="alert">{error}</p>}
-
-          <p className="done-footnote">
-            <Headset size={15} /> Need help with this bill or experienced an issue?{" "}
-            <a href="tel:0652223333">Contact Batticaloa SOS Desk at 065-222-3333</a>
-          </p>
+          </div>
         </div>
-      </main>
+      )}
     </div>
   );
 }

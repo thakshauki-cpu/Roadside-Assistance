@@ -7,6 +7,7 @@ import Admin from "../models/Admin.js";
 import User from "../models/User.js";
 import MechanicProfile from "../models/MechanicProfile.js";
 import ServiceRequest from "../models/ServiceRequest.js";
+import Payment from "../models/Payment.js";
 
 // Generate Admin JWT Token
 const generateAdminToken = (adminId) => {
@@ -108,8 +109,15 @@ export const getAdminDashboard = async (req, res) => {
       "searching",
       "assigned",
       "accepted",
+      "inspection_fee_submitted",
+      "inspection_paid",
       "on_the_way",
-      "in_progress",
+      "arrived",
+      "inspecting",
+      "inspection_completed",
+      "quotation_submitted",
+      "repair_in_progress",
+      "repair_completed",
     ];
 
     // Get all dashboard counts simultaneously
@@ -122,8 +130,8 @@ export const getAdminDashboard = async (req, res) => {
       activeRequests,
       completedRequests,
       cancelledRequests,
+      revenueResult,
     ] = await Promise.all([
-
       // Total customers
       User.countDocuments({
         role: "customer",
@@ -161,18 +169,24 @@ export const getAdminDashboard = async (req, res) => {
       ServiceRequest.countDocuments({
         status: "cancelled",
       }),
+
+      // Total revenue from confirmed payments
+      Payment.aggregate([
+        { $match: { status: "paid" } },
+        { $group: { _id: null, total: { $sum: "$amount" } } },
+      ]),
     ]);
 
-    // Get latest 5 service requests
+    const totalRevenue = revenueResult?.[0]?.total || 0;
+
+    // Get latest 10 service requests
     const recentRequests = await ServiceRequest.find()
       .populate("customer", "fullName email mobile")
       .populate("mechanic", "fullName mobile")
-      .populate(
-        "vehicle",
-        "vehicleType model registrationNumber"
-      )
+      .populate("vehicle", "vehicleType model registrationNumber")
       .sort({ createdAt: -1 })
-      .limit(5);
+      .limit(10)
+      .lean();
 
     // Send dashboard data
     return res.status(200).json({
@@ -187,17 +201,73 @@ export const getAdminDashboard = async (req, res) => {
         activeRequests,
         completedRequests,
         cancelledRequests,
+        totalRevenue,
       },
 
       recentRequests,
     });
-
   } catch (error) {
     console.error("Admin dashboard error:", error);
 
     return res.status(500).json({
       success: false,
       message: "Failed to load admin dashboard.",
+    });
+  }
+};
+
+// GET ALL SERVICE REQUESTS FOR ADMIN
+// GET /api/admin/service-requests
+export const getAdminServiceRequests = async (req, res) => {
+  try {
+    const { status, page = 1, limit = 10 } = req.query;
+    let query = {};
+    if (status && status !== "all") {
+      if (status === "dispatched") {
+        query.status = {
+          $in: [
+            "assigned",
+            "accepted",
+            "inspection_fee_submitted",
+            "inspection_paid",
+            "on_the_way",
+            "arrived",
+            "inspecting",
+            "inspection_completed",
+            "quotation_submitted",
+            "repair_in_progress",
+            "repair_completed",
+          ],
+        };
+      } else {
+        query.status = status;
+      }
+    }
+    const skip = (Number(page) - 1) * Number(limit);
+    const [requests, total] = await Promise.all([
+      ServiceRequest.find(query)
+        .populate("customer", "fullName email mobile")
+        .populate("mechanic", "fullName mobile email")
+        .populate("vehicle", "vehicleType model registrationNumber")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(Number(limit))
+        .lean(),
+      ServiceRequest.countDocuments(query),
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      requests,
+      total,
+      page: Number(page),
+      totalPages: Math.ceil(total / Number(limit)) || 1,
+    });
+  } catch (error) {
+    console.error("Get admin service requests error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch service requests.",
     });
   }
 };

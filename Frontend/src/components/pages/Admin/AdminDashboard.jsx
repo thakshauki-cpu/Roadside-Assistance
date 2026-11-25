@@ -26,6 +26,7 @@ import {
   rejectAdminMechanic,
   getAdminReviews,
 } from "../../../api/admin";
+import { getSocket } from "../../../socket";
 
 function AdminDashboard() {
   const navigate = useNavigate();
@@ -84,6 +85,22 @@ function AdminDashboard() {
 
   useEffect(() => {
     loadMechanicQueue();
+  }, []);
+
+  useEffect(() => {
+    const socket = getSocket();
+    if (socket) {
+      const handleAdminUpdate = () => {
+        getAdminDashboard().then(setDashboard).catch(() => {});
+        loadMechanicQueue();
+      };
+      socket.on("new_service_request", handleAdminUpdate);
+      socket.on("service_request_updated", handleAdminUpdate);
+      return () => {
+        socket.off("new_service_request", handleAdminUpdate);
+        socket.off("service_request_updated", handleAdminUpdate);
+      };
+    }
   }, []);
 
   useEffect(() => {
@@ -381,7 +398,19 @@ function AdminDashboard() {
                         </td>
 
                         <td>
-                          <strong>—</strong>
+                          <strong>
+                            {item.repairPayment?.amount ||
+                            item.inspectionPayment?.amount ||
+                            item.repairQuotation?.totalAmount ||
+                            item.inspectionFee?.totalAmount
+                              ? `Rs. ${(
+                                  item.repairPayment?.amount ||
+                                  item.inspectionPayment?.amount ||
+                                  item.repairQuotation?.totalAmount ||
+                                  item.inspectionFee?.totalAmount
+                                ).toLocaleString()}`
+                              : "—"}
+                          </strong>
                         </td>
                       </tr>
                     ))
@@ -489,7 +518,7 @@ function AdminDashboard() {
                     className="adm-btn-light"
                     onClick={() =>
                       navigate(
-                        `/admin/verification/review?id=${item._id}`
+                        `/admin/verification?id=${item._id}`
                       )
                     }
                   >

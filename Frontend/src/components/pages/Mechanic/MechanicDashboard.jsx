@@ -18,6 +18,7 @@ import {
   rejectServiceRequest,
   updateMechanicAvailability,
   getMechanicReviews,
+  getMechanicDashboardStats,
 } from "../../../api/mechanic";
 
 import "../../styles/Mechanic/MechanicDashboard.css";
@@ -36,6 +37,7 @@ function MechanicDashboard() {
   const [reviewData, setReviewData] = useState(null);
   const [reviewsLoading, setReviewsLoading] = useState(true);
   const [reviewsError, setReviewsError] = useState("");
+  const [stats, setStats] = useState(null);
 
   useEffect(() => {
     let active = true;
@@ -90,6 +92,14 @@ function MechanicDashboard() {
       })
       .finally(() => {
         if (active) setReviewsLoading(false);
+      });
+
+    getMechanicDashboardStats()
+      .then((data) => {
+        if (active && data.stats) setStats(data.stats);
+      })
+      .catch((err) => {
+        console.error("Dashboard stats error:", err);
       });
 
     return () => {
@@ -209,15 +219,15 @@ function MechanicDashboard() {
               </span>
             </div>
 
-            <h2>Rs. 18,500</h2>
+            <h2>Rs. {Number(stats?.todayEarnings || 0).toLocaleString()}</h2>
 
             <p className="stat-positive">
-              ↗ +12% <span>vs yesterday</span>
+              {stats?.todayEarnings > 0 ? "↗ Confirmed" : "● Ready"} <span>Today's demo revenue</span>
             </p>
 
             <div className="stat-bottom">
-              <span>Target: Rs. 24,000</span>
-              <span>77% met</span>
+              <span>Target: Rs. {Number(stats?.targetEarnings || 24000).toLocaleString()}</span>
+              <span>{Math.round(((stats?.todayEarnings || 0) / (stats?.targetEarnings || 24000)) * 100)}% met</span>
             </div>
 
           </div>
@@ -234,7 +244,7 @@ function MechanicDashboard() {
             </div>
 
             <h2>
-              4 <small>/ 6 Target</small>
+              {stats?.completedJobsToday ?? 0} <small>/ {stats?.targetJobs || 6} Target</small>
             </h2>
 
             <div className="target-progress">
@@ -242,7 +252,7 @@ function MechanicDashboard() {
             </div>
 
             <p className="stat-description">
-              2 more to daily milestone bonus
+              {stats?.totalJobsCompleted ?? 0} total completed jobs all-time
             </p>
 
           </div>
@@ -255,16 +265,18 @@ function MechanicDashboard() {
               <span className="active-dot" />
             </div>
 
-            <h2>1 Live Job</h2>
+            <h2>{stats?.activeJob ? "1 Live Job" : "0 Live Jobs"}</h2>
 
             <p>
               <Clock3 size={13} />
-              Awaiting Technician Arrival
+              {stats?.activeJob
+                ? `Status: ${stats.activeJob.status.replace(/_/g, " ").toUpperCase()}`
+                : "Awaiting new request"}
             </p>
 
             <div className="dispatch-bottom">
-              <span>Ticket: #RM-8492</span>
-              <span>ETA: 6 mins</span>
+              <span>Ticket: {stats?.activeJob ? `#${stats.activeJob._id.slice(-6).toUpperCase()}` : "None"}</span>
+              <span>{stats?.activeJob ? "In progress" : "Standby"}</span>
             </div>
 
           </div>
@@ -280,7 +292,7 @@ function MechanicDashboard() {
               </span>
             </div>
 
-            <h2>14 mins</h2>
+            <h2>{stats?.avgResponseMinutes || 14} mins</h2>
 
             <p className="stat-positive">
               ✧ Top 5% <span>Eastern Province</span>
@@ -375,7 +387,7 @@ function MechanicDashboard() {
                     onClick={() => handleRequestAction(request._id, "accept")}
                   >
                     {processingRequestId === request._id &&
-                    processingAction === "accept"
+                      processingAction === "accept"
                       ? "Accepting..."
                       : "Accept"}
                   </button>
@@ -390,7 +402,7 @@ function MechanicDashboard() {
                     onClick={() => handleRequestAction(request._id, "reject")}
                   >
                     {processingRequestId === request._id &&
-                    processingAction === "reject"
+                      processingAction === "reject"
                       ? "Rejecting..."
                       : "Reject"}
                   </button>

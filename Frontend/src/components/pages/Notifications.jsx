@@ -30,6 +30,7 @@ import {
 } from "../../api/notifications";
 
 import "../styles/Notifications.css";
+import { getSocket } from "../../socket";
 
 const notificationIcons = {
   request: Wrench,
@@ -102,6 +103,34 @@ function Notifications() {
 
   useEffect(() => {
     fetchNotifications();
+
+    const socket = getSocket();
+    if (socket) {
+      const handleNewNotif = (notif) => {
+        const formatted = {
+          id: notif._id,
+          type:
+            notif.type === "assigned"
+              ? "request"
+              : notif.type === "on_the_way"
+              ? "onway"
+              : notif.type,
+          title: notif.title,
+          description: notif.message,
+          time: new Date(notif.createdAt || Date.now()).toLocaleString(),
+          location: notif.serviceRequest?.location?.address || "",
+          status: notif.serviceRequest?.status || "",
+          unread: true,
+          actions: [],
+        };
+        setNotifications((prev) => [formatted, ...prev]);
+      };
+
+      socket.on("new_notification", handleNewNotif);
+      return () => {
+        socket.off("new_notification", handleNewNotif);
+      };
+    }
   }, []);
 
   // Count unread notifications.

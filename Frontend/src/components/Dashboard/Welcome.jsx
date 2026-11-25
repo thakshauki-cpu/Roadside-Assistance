@@ -224,7 +224,7 @@ function WelcomeSection() {
           </div>
         </section>
 
-       
+
         {/* Vehicle card */}
         <section className="vehicle-card">
           <div className="vehicle-card-heading">
@@ -312,9 +312,8 @@ function WelcomeSection() {
               {registeredVehicles.map((vehicle) => (
                 <button
                   type="button"
-                  className={`dashboard-registered-vehicle ${
-                    vehicle.id === primaryVehicle?.id ? "selected" : ""
-                  }`}
+                  className={`dashboard-registered-vehicle ${vehicle.id === primaryVehicle?.id ? "selected" : ""
+                    }`}
                   aria-pressed={vehicle.id === primaryVehicle?.id}
                   onClick={() => setSelectedVehicleId(vehicle.id)}
                   key={vehicle.id}
@@ -327,7 +326,7 @@ function WelcomeSection() {
             </div>
           )}
         </section>
-        </div>
+      </div>
 
 
       {/* Bottom cards */}
@@ -396,13 +395,20 @@ function WelcomeSection() {
               <button
                 type="button"
                 className="invoice-button"
-                onClick={() =>
+                onClick={() => {
+                  const targetReq = activeRequest || recentRequest;
+                  if (targetReq) {
+                    localStorage.setItem(
+                      "createdServiceRequest",
+                      JSON.stringify(targetReq)
+                    );
+                  }
                   navigate(
                     activeRequest
                       ? "/get-help/tracking"
                       : "/get-help/summary"
-                  )
-                }
+                  );
+                }}
               >
                 {activeRequest ? "Track Request" : "View Request Details"}
                 <ArrowRight size={14} />
@@ -505,7 +511,7 @@ function WelcomeSection() {
           <div className="road-advice">
             <span>Need road advice?</span>
 
-           
+
           </div>
         </section>
 

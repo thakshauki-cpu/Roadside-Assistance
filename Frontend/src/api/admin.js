@@ -70,6 +70,45 @@ export const getAdminDashboard = async () => {
   return data;
 };
 
+// Get All Service Requests for Admin
+export const getAdminServiceRequests = async ({
+  status = "all",
+  page = 1,
+  limit = 10,
+} = {}) => {
+  const token =
+    localStorage.getItem("adminToken") ||
+    sessionStorage.getItem("adminToken");
+
+  if (!token) {
+    throw new Error("Admin token not found. Please login again.");
+  }
+
+  const params = new URLSearchParams({
+    status,
+    page: String(page),
+    limit: String(limit),
+  });
+
+  const response = await fetch(
+    `${API_URL}/api/admin/service-requests?${params.toString()}`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Unable to load service requests");
+  }
+
+  return data;
+};
+
 export const getAdminReviews = async () => {
   const token =
     localStorage.getItem("adminToken") ||

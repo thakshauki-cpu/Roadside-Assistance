@@ -1,7 +1,8 @@
-
+import http from "http";
 import dotenv from "dotenv";
 import connectDB from "./config/db.js";
 import app from "./app.js";
+import { initSocket } from "./socket.js";
 
 dotenv.config();
 
@@ -11,7 +12,10 @@ const startServer = async () => {
   try {
     await connectDB();
 
-    app.listen(PORT, () => {
+    const server = http.createServer(app);
+    initSocket(server);
+
+    server.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);
     });
   } catch (error) {
@@ -21,44 +25,3 @@ const startServer = async () => {
 };
 
 startServer();
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// await connectDB();
-
-// app.get('/', (req,res) =>{
-//     res.send("sever is running")
-// })
-
-// app.listen(PORT, () => {
-//     console.log(`Server is Running on ${PORT}`)
-// });
-
-// app.use(express.json());
-// app.use("/api/auth",authRoutes);
-
-
-
-
-
-
