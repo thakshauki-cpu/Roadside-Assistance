@@ -5,7 +5,8 @@ const request = async (path, options = {}) => {
     throw new Error("The backend URL is not configured. Set VITE_API_URL in Frontend/.env.");
   }
 
-  const token = localStorage.getItem("token");
+  const token =
+    localStorage.getItem("token") || sessionStorage.getItem("token");
   if (!token) {
     throw new Error("Please log in again to continue.");
   }

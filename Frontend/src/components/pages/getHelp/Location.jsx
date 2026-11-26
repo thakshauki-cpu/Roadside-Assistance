@@ -171,7 +171,20 @@ function Location() {
               <CarFront size={16} />
               <div>
                 <span>Active Vehicle</span>
-                <strong>EP CAB 1234 • Toyota Axio (White)</strong>
+                <strong>
+                  {(() => {
+                    try {
+                      const draft = JSON.parse(localStorage.getItem("serviceRequest") || "{}");
+                      const v = draft.vehicle;
+                      if (v && (v.registrationNumber || v.model)) {
+                        return `${v.registrationNumber || ""}${v.registrationNumber && v.model ? " • " : ""}${v.model || ""}`.trim();
+                      }
+                    } catch {
+                      // ignore parse errors
+                    }
+                    return "Vehicle details will be selected next";
+                  })()}
+                </strong>
               </div>
             </div>
           </div>

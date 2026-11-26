@@ -100,7 +100,8 @@ function Problem() {
       JSON.parse(localStorage.getItem("serviceRequest")) || {};
 
     // Get JWT token
-    const token = localStorage.getItem("token");
+    const token =
+      localStorage.getItem("token") || sessionStorage.getItem("token");
     const apiUrl = import.meta.env.VITE_API_URL;
 
     if (!token) {

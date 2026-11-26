@@ -13,6 +13,7 @@ import {
 
 import { useNavigate } from "react-router-dom";
 import logo from "../../assets/logo.png";
+import { disconnectSocket } from "../../socket";
 import "./Sidebar.css";
 
 const menuItems = [
@@ -63,10 +64,13 @@ function DashboardSidebar({ activeItem = "Dashboard" }) {
   // };
 
   const handleLogout = () => {
-  localStorage.removeItem("token");
-  localStorage.removeItem("user"); // also remove the saved user
-  navigate("/login");
-};
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    sessionStorage.removeItem("token");
+    sessionStorage.removeItem("user");
+    disconnectSocket();
+    navigate("/login");
+  };
 
   return (
     <aside className="dashboard-sidebar">

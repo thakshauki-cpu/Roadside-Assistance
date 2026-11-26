@@ -7,7 +7,8 @@ const request = async (path, options = {}) => {
     );
   }
 
-  const token = localStorage.getItem("token");
+  const token =
+    localStorage.getItem("token") || sessionStorage.getItem("token");
   if (!token) {
     throw new Error("Please log in again to continue.");
   }
@@ -147,5 +148,15 @@ export const mechanicCompleteRepair = (requestId) =>
     `/api/service-requests/mechanic/${encodeURIComponent(requestId)}/complete-repair`,
     {
       method: "PATCH",
+    }
+  );
+
+// Real-time GPS location update while on_the_way
+export const updateMechanicGpsLocation = (requestId, { latitude, longitude, accuracy }) =>
+  request(
+    `/api/service-requests/mechanic/${encodeURIComponent(requestId)}/location`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ latitude, longitude, accuracy }),
     }
   );

@@ -20,6 +20,7 @@ import {
   getMechanicReviews,
   getMechanicDashboardStats,
 } from "../../../api/mechanic";
+import { getSocket } from "../../../socket";
 
 import "../../styles/Mechanic/MechanicDashboard.css";
 
@@ -101,6 +102,40 @@ function MechanicDashboard() {
       .catch((err) => {
         console.error("Dashboard stats error:", err);
       });
+
+    const socket = getSocket();
+    if (socket) {
+      const refreshMechanicDashboard = () => {
+        getPendingServiceRequests()
+          .then(({ requests: pendingRequests }) => {
+            if (active) setRequests(pendingRequests || []);
+          })
+          .catch(() => {});
+        getMechanicDashboardStats()
+          .then((data) => {
+            if (active && data.stats) setStats(data.stats);
+          })
+          .catch(() => {});
+      };
+
+      const events = [
+        "new_service_request",
+        "service_request_accepted",
+        "service_request_rejected",
+        "inspection_payment_completed",
+        "repair_quotation_accepted",
+        "repair_quotation_rejected",
+        "repair_payment_completed",
+        "service_request_updated",
+        "connect",
+      ];
+      events.forEach((ev) => socket.on(ev, refreshMechanicDashboard));
+
+      return () => {
+        active = false;
+        events.forEach((ev) => socket.off(ev, refreshMechanicDashboard));
+      };
+    }
 
     return () => {
       active = false;

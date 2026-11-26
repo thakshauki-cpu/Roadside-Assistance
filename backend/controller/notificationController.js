@@ -28,7 +28,6 @@ export const createWorkflowNotification = async ({
 
     const notification = await Notification.create({
       recipient,
-      customer: recipient,
       sender,
       serviceRequest,
       title,
@@ -38,6 +37,7 @@ export const createWorkflowNotification = async ({
     });
 
     // Real-time socket emission to the recipient user
+    emitToUser(recipient, "notification_created", notification);
     emitToUser(recipient, "new_notification", notification);
 
     return notification;
@@ -52,9 +52,9 @@ export const getNotifications = async (req, res) => {
   try {
     const userId = req.user;
 
-    const notifications = await Notification.find({
-      $or: [{ recipient: userId }, { customer: userId }],
-    })
+    const notifications = await Notification.find(
+      { recipient: userId }
+    )
       .populate("sender", "fullName role")
       .populate("serviceRequest", "problem status location")
       .sort({ createdAt: -1 })
@@ -103,6 +103,11 @@ export const markNotificationAsRead = async (req, res) => {
       });
     }
 
+    emitToUser(req.user, "notification_read", {
+      notificationId: notification._id,
+      allRead: false,
+    });
+
     return res.status(200).json({
       success: true,
       notification,
@@ -126,6 +131,10 @@ export const markAllNotificationsAsRead = async (req, res) => {
       },
       { $set: { isRead: true } }
     );
+
+    emitToUser(req.user, "notification_read", {
+      allRead: true,
+    });
 
     return res.status(200).json({
       success: true,

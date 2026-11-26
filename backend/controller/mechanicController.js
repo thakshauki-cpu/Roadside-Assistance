@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import MechanicProfile from "../models/MechanicProfile.js";
 import User from "../models/User.js";
 import ServiceRequest from "../models/ServiceRequest.js";

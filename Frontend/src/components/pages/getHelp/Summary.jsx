@@ -36,6 +36,7 @@ import {
   readCreatedRequest,
   readRequest,
 } from "./requestSampleData";
+import { getSocket, joinRequestRoom, leaveRequestRoom } from "../../../socket";
 import "../../styles/GetHelp.css";
 import "../../styles/Summary.css";
 
@@ -101,17 +102,40 @@ function Summary() {
     };
 
     loadSettlementData();
+
+    const socket = getSocket();
+    if (socket && requestId) {
+      joinRequestRoom(requestId);
+      const handleSummaryUpdate = () => {
+        loadSettlementData();
+      };
+      const events = [
+        "repair_completed",
+        "repair_payment_completed",
+        "service_request_updated",
+        "connect",
+      ];
+      events.forEach((ev) => socket.on(ev, handleSummaryUpdate));
+
+      return () => {
+        active = false;
+        leaveRequestRoom(requestId);
+        events.forEach((ev) => socket.off(ev, handleSummaryUpdate));
+      };
+    }
+
     return () => {
       active = false;
     };
   }, [requestId]);
 
   const mechanic = summary?.mechanic || completion?.mechanic || assignment?.mechanic || {};
-  const status = summary?.status || assignment?.status || "completed";
+  const status = summary?.status || assignment?.status || "pending";
   const isRepairRejected = status === "repair_rejected" || summary?.repairQuotation?.status === "rejected";
   const isRepairPaid = summary?.repairPayment?.status === "paid" || status === "completed";
 
-  const inspectionFeeAmount = summary?.inspectionFee?.totalAmount || assignment?.inspectionFee?.totalAmount || 2000;
+  const inspectionFeeAmount =
+    summary?.inspectionFee?.totalAmount ?? assignment?.inspectionFee?.totalAmount ?? 0;
   const inspectionPayment = summary?.inspectionPayment || assignment?.inspectionPayment || {};
 
   const labour = summary?.repairQuotation?.labourCharge || 0;
@@ -120,9 +144,13 @@ function Summary() {
   const repairBaseTotal = summary?.repairQuotation?.totalAmount || labour + parts + additionalCharges;
   const grandTotal = isRepairRejected ? 0 : repairBaseTotal + tip;
 
-  const completedDate = completion?.completedAt ? new Date(completion.completedAt) : new Date();
-  const completedAt = completedDate.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
-  const completedOn = completedDate.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+  const completedDate = completion?.completedAt ? new Date(completion.completedAt) : null;
+  const completedAt = completedDate
+    ? completedDate.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
+    : "Pending";
+  const completedOn = completedDate
+    ? completedDate.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
+    : "Pending";
 
   const handlePayRepair = async () => {
     try {

@@ -91,14 +91,25 @@ function AdminDashboard() {
     const socket = getSocket();
     if (socket) {
       const handleAdminUpdate = () => {
-        getAdminDashboard().then(setDashboard).catch(() => {});
+        getAdminDashboard().then(setDashboard).catch(() => { });
         loadMechanicQueue();
       };
-      socket.on("new_service_request", handleAdminUpdate);
-      socket.on("service_request_updated", handleAdminUpdate);
+      const events = [
+        "new_service_request",
+        "service_request_accepted",
+        "service_request_rejected",
+        "no_mechanics_available",
+        "inspection_fee_submitted",
+        "inspection_payment_completed",
+        "repair_quotation_submitted",
+        "repair_completed",
+        "repair_payment_completed",
+        "service_request_updated",
+        "connect",
+      ];
+      events.forEach((ev) => socket.on(ev, handleAdminUpdate));
       return () => {
-        socket.off("new_service_request", handleAdminUpdate);
-        socket.off("service_request_updated", handleAdminUpdate);
+        events.forEach((ev) => socket.off(ev, handleAdminUpdate));
       };
     }
   }, []);
@@ -131,33 +142,33 @@ function AdminDashboard() {
   // Dashboard statistics
   const stats = overview
     ? [
-        {
-          label: "Total Customers",
-          value: overview.totalCustomers,
-          icon: Users,
-          foot: "Registered customer accounts",
-        },
-        {
-          label: "Roadside Requests",
-          value: overview.totalRequests,
-          icon: Activity,
-          badge: `${overview.activeRequests} Active`,
-          foot: `${overview.completedRequests} Completed`,
-        },
-        {
-          label: "Registered Mechanics",
-          value: overview.totalMechanics,
-          icon: Store,
-          foot: "Total registered mechanics",
-        },
-        {
-          label: "Mechanic Verification",
-          value: overview.pendingMechanics,
-          icon: ShieldCheck,
-          badge: "Pending",
-          foot: `${overview.verifiedMechanics} Verified`,
-        },
-      ]
+      {
+        label: "Total Customers",
+        value: overview.totalCustomers,
+        icon: Users,
+        foot: "Registered customer accounts",
+      },
+      {
+        label: "Roadside Requests",
+        value: overview.totalRequests,
+        icon: Activity,
+        badge: `${overview.activeRequests} Active`,
+        foot: `${overview.completedRequests} Completed`,
+      },
+      {
+        label: "Registered Mechanics",
+        value: overview.totalMechanics,
+        icon: Store,
+        foot: "Total registered mechanics",
+      },
+      {
+        label: "Mechanic Verification",
+        value: overview.pendingMechanics,
+        icon: ShieldCheck,
+        badge: "Pending",
+        foot: `${overview.verifiedMechanics} Verified`,
+      },
+    ]
     : [];
 
   // Filter requests
@@ -400,15 +411,15 @@ function AdminDashboard() {
                         <td>
                           <strong>
                             {item.repairPayment?.amount ||
-                            item.inspectionPayment?.amount ||
-                            item.repairQuotation?.totalAmount ||
-                            item.inspectionFee?.totalAmount
+                              item.inspectionPayment?.amount ||
+                              item.repairQuotation?.totalAmount ||
+                              item.inspectionFee?.totalAmount
                               ? `Rs. ${(
-                                  item.repairPayment?.amount ||
-                                  item.inspectionPayment?.amount ||
-                                  item.repairQuotation?.totalAmount ||
-                                  item.inspectionFee?.totalAmount
-                                ).toLocaleString()}`
+                                item.repairPayment?.amount ||
+                                item.inspectionPayment?.amount ||
+                                item.repairQuotation?.totalAmount ||
+                                item.inspectionFee?.totalAmount
+                              ).toLocaleString()}`
                               : "—"}
                           </strong>
                         </td>

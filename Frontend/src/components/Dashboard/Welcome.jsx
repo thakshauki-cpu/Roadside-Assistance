@@ -52,7 +52,8 @@ function WelcomeSection() {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const token = localStorage.getItem("token");
+        const token =
+          localStorage.getItem("token") || sessionStorage.getItem("token");
 
         if (!token) {
           setError("Please login to view your dashboard.");

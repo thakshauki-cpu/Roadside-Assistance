@@ -24,9 +24,10 @@ import RequestStepper from "../../gethelp/RequestStepper";
 import {
   getAssignment,
   getNearbyMechanics,
-  respondToQuotation,
   payInspectionFee,
+  retryServiceRequest,
 } from "../../../api/getHelp";
+import { getSocket, joinRequestRoom, leaveRequestRoom } from "../../../socket";
 import { getCreatedRequestId, readRequest } from "./requestSampleData";
 import "../../styles/GetHelp.css";
 
@@ -90,6 +91,29 @@ function MechanicFound() {
     };
 
     loadMechanicData();
+
+    const socket = getSocket();
+    if (socket && requestId) {
+      joinRequestRoom(requestId);
+      const handleRealtimeUpdate = () => {
+        loadMechanicData();
+      };
+      const events = [
+        "service_request_accepted",
+        "inspection_fee_submitted",
+        "no_mechanics_available",
+        "service_request_updated",
+        "connect",
+      ];
+      events.forEach((ev) => socket.on(ev, handleRealtimeUpdate));
+
+      return () => {
+        active = false;
+        leaveRequestRoom(requestId);
+        events.forEach((ev) => socket.off(ev, handleRealtimeUpdate));
+      };
+    }
+
     return () => {
       active = false;
     };
@@ -107,14 +131,10 @@ function MechanicFound() {
   const seconds = String(secondsLeft % 60).padStart(2, "0");
   const mechanic = assignment?.mechanic;
 
-  // Use real backend inspection fee or fallback to default breakdown
-  const inspectionFee = assignment?.inspectionFee || {
-    travelFee: 500,
-    visitFee: 500,
-    inspectionCharge: 1000,
-    totalAmount: 2000,
-    description: "Mechanic travelling, location visit, and vehicle inspection",
-  };
+  // Use real backend inspection fee only if mechanic has submitted it; otherwise null
+  const inspectionFee = assignment?.inspectionFee?.status === "submitted" || assignment?.inspectionFee?.status === "paid"
+    ? assignment.inspectionFee
+    : null;
 
   const handleQuotationResponse = async (response) => {
     try {
@@ -149,10 +169,6 @@ function MechanicFound() {
       setActionLoading(true);
       setError("");
 
-      if (assignment.status === "pending" || assignment.status === "searching") {
-        await respondToQuotation(requestId, "accepted", mechanic.id);
-      }
-
       // Call backend to validate and record demo payment in MongoDB
       const result = await payInspectionFee(requestId, {
         paymentMethod: selectedPaymentMethod,
@@ -165,6 +181,24 @@ function MechanicFound() {
       }, 1000);
     } catch (payError) {
       setError(payError.message || "Failed to process inspection fee demo payment.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleRetrySearch = async () => {
+    try {
+      setActionLoading(true);
+      setError("");
+      await retryServiceRequest(requestId);
+      const [nearbyData, assignmentData] = await Promise.all([
+        getNearbyMechanics(requestId),
+        getAssignment(requestId),
+      ]);
+      setNearbyMechanics(nearbyData.mechanics || []);
+      setAssignment(assignmentData);
+    } catch (retryErr) {
+      setError(retryErr.message || "Failed to retry mechanic search.");
     } finally {
       setActionLoading(false);
     }
@@ -188,7 +222,14 @@ function MechanicFound() {
     );
   }
 
-  if (assignment.noMechanicsAvailable || !mechanic) {
+  if (assignment.noMechanicsAvailable) {
+    const reasonMessages = {
+      all_rejected: "All eligible nearby mechanics have declined this request.",
+      no_matching_service: "No available nearby mechanics currently support this service.",
+      missing_mechanic_locations: "Nearby mechanics have not configured their locations yet.",
+      missing_customer_location: "Your breakdown location coordinates are missing.",
+      no_mechanics_nearby: "No available mechanics were found within service radius.",
+    };
     return (
       <div className="gethelp-page">
         <DashboardSidebar activeItem="My Requests" />
@@ -196,9 +237,44 @@ function MechanicFound() {
           <DashboardTopbar />
           <div className="gethelp-content">
             <RequestStepper currentStep={4} />
-            <section className="gethelp-card">
-              <h2>No more mechanics available</h2>
-              <p>All available mechanics have been rejected for this request.</p>
+            <section className="gethelp-card" style={{ textAlign: "center", padding: "32px" }}>
+              <h2>No Eligible Mechanics Available</h2>
+              <p style={{ color: "#66728a", margin: "10px 0 20px" }}>
+                {reasonMessages[assignment.matchingReason] ||
+                  "No eligible mechanics are currently available for your request."}
+              </p>
+              {error && <p className="form-error" role="alert">{error}</p>}
+              <button
+                type="button"
+                className="gh-next-button"
+                onClick={handleRetrySearch}
+                disabled={actionLoading}
+              >
+                {actionLoading ? "Searching..." : "Retry Mechanic Search"}
+              </button>
+            </section>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (!mechanic) {
+    return (
+      <div className="gethelp-page">
+        <DashboardSidebar activeItem="My Requests" />
+        <main className="gethelp-main">
+          <DashboardTopbar />
+          <div className="gethelp-content">
+            <RequestStepper currentStep={4} />
+            <section className="gethelp-card" style={{ textAlign: "center", padding: "32px" }}>
+              <Timer size={36} color="#1453ff" style={{ marginBottom: "12px" }} />
+              <h2>Waiting for Mechanic Acceptance</h2>
+              <p style={{ color: "#66728a", margin: "10px 0" }}>
+                Your request ({assignment.requestReference}) has been dispatched to{" "}
+                <strong>{nearbyMechanics.length}</strong> eligible nearby mechanic(s).
+                This page will update automatically as soon as a mechanic accepts.
+              </p>
             </section>
           </div>
         </main>
@@ -261,19 +337,25 @@ function MechanicFound() {
 
                     <p className="mechanic-rating">
                       <Star size={14} fill="#f5a524" color="#f5a524" />
-                      <strong>{mechanic.rating || 4.8}</strong> ({mechanic.ratingCount || 12} roadside reviews)
+                      {mechanic.rating !== null && mechanic.rating !== undefined ? (
+                        <>
+                          <strong>{mechanic.rating}</strong> ({mechanic.ratingCount || 0} roadside reviews)
+                        </>
+                      ) : (
+                        <span>No reviews yet</span>
+                      )}
                     </p>
 
                     <p className="mechanic-address">
-                      <MapPin size={13} /> {mechanic.location || "Batticaloa"}
+                      <MapPin size={13} /> {mechanic.location || "Location verified"}
                     </p>
 
                     <div className="mechanic-badges">
                       <span className="distance-badge">
-                        ● {mechanic.distanceKm === null ? "Distance unavailable" : `${mechanic.distanceKm} km away`}
+                        ● {mechanic.distanceKm === null || mechanic.distanceKm === undefined ? "Distance unavailable" : `${mechanic.distanceKm} km away`}
                       </span>
                       <span className="eta-badge">
-                        <Zap size={13} /> ETA ~15 mins
+                        <Zap size={13} /> Verified Dispatch
                       </span>
                     </div>
 
@@ -323,102 +405,119 @@ function MechanicFound() {
                   <span className="guaranteed-badge">Pre-Dispatch</span>
                 </div>
 
-                <h2>Inspection Fee Breakdown</h2>
-                <p className="gh-help-text">
-                  Covers mechanic travel and on-site diagnosis. Repair charges for labour and parts will be quoted separately after inspection.
-                </p>
+                {inspectionFee ? (
+                  <>
+                    <h2>Inspection Fee Breakdown</h2>
+                    <p className="gh-help-text">
+                      Covers mechanic travel and on-site diagnosis. Repair charges for labour and parts will be quoted separately after inspection.
+                    </p>
 
-                <div className="quotation-box">
-                  <div className="quotation-line">
-                    <div>
-                      <strong>Mechanic Travelling Charge</strong>
-                      <p>Fuel &amp; distance coverage to breakdown area</p>
+                    <div className="quotation-box">
+                      <div className="quotation-line">
+                        <div>
+                          <strong>Mechanic Travelling Charge</strong>
+                          <p>Fuel &amp; distance coverage to breakdown area</p>
+                        </div>
+                        <strong>Rs. {Number(inspectionFee.travelFee || 0).toLocaleString()}</strong>
+                      </div>
+
+                      <div className="quotation-line">
+                        <div>
+                          <strong>Breakdown Location Visit</strong>
+                          <p>Emergency roadside dispatch fee</p>
+                        </div>
+                        <strong>Rs. {Number(inspectionFee.visitFee || 0).toLocaleString()}</strong>
+                      </div>
+
+                      <div className="quotation-line">
+                        <div>
+                          <strong>Vehicle Inspection Charge</strong>
+                          <p>On-site diagnostic inspection &amp; tool usage</p>
+                        </div>
+                        <strong>Rs. {Number(inspectionFee.inspectionCharge || 0).toLocaleString()}</strong>
+                      </div>
+
+                      <div className="quotation-total">
+                        <div>
+                          <small>TOTAL INSPECTION FEE</small>
+                          <span>Pre-payment required to dispatch mechanic</span>
+                        </div>
+                        <strong>Rs. {Number(inspectionFee.totalAmount || 0).toLocaleString()}</strong>
+                      </div>
                     </div>
-                    <strong>Rs. {Number(inspectionFee.travelFee || 0).toLocaleString()}</strong>
-                  </div>
 
-                  <div className="quotation-line">
-                    <div>
-                      <strong>Breakdown Location Visit</strong>
-                      <p>Emergency roadside dispatch fee</p>
+                    <div className="guarantee-note" style={{ background: "#eef4ff", border: "1px solid #c9daff", padding: "12px", borderRadius: "10px", marginTop: "14px" }}>
+                      <CircleCheck size={16} color="#1453ff" />
+                      <p style={{ margin: 0, fontSize: "12px", color: "#223567" }}>
+                        <strong>Notice:</strong> This inspection fee confirms the mechanic dispatch. The mechanic will NOT travel until this fee is paid.
+                      </p>
                     </div>
-                    <strong>Rs. {Number(inspectionFee.visitFee || 0).toLocaleString()}</strong>
-                  </div>
 
-                  <div className="quotation-line">
-                    <div>
-                      <strong>Vehicle Inspection Charge</strong>
-                      <p>On-site diagnostic inspection &amp; tool usage</p>
+                    <p className="settlement-title" style={{ marginTop: "14px" }}>Choose Demo Payment Method:</p>
+                    <div className="settlement-chips">
+                      <span
+                        onClick={() => setSelectedPaymentMethod("card")}
+                        style={{
+                          cursor: "pointer",
+                          border: selectedPaymentMethod === "card" ? "2px solid #1453ff" : "1px solid #dfe3ee",
+                          background: selectedPaymentMethod === "card" ? "#eef2ff" : "#fff",
+                          fontWeight: selectedPaymentMethod === "card" ? "bold" : "normal"
+                        }}
+                      >
+                        <CreditCard size={14} /> Card (Demo)
+                      </span>
+                      <span
+                        onClick={() => setSelectedPaymentMethod("qr")}
+                        style={{
+                          cursor: "pointer",
+                          border: selectedPaymentMethod === "qr" ? "2px solid #1453ff" : "1px solid #dfe3ee",
+                          background: selectedPaymentMethod === "qr" ? "#eef2ff" : "#fff",
+                          fontWeight: selectedPaymentMethod === "qr" ? "bold" : "normal"
+                        }}
+                      >
+                        <QrCode size={14} /> LankaQR (Demo)
+                      </span>
+                      <span
+                        onClick={() => setSelectedPaymentMethod("cash")}
+                        style={{
+                          cursor: "pointer",
+                          border: selectedPaymentMethod === "cash" ? "2px solid #1453ff" : "1px solid #dfe3ee",
+                          background: selectedPaymentMethod === "cash" ? "#eef2ff" : "#fff",
+                          fontWeight: selectedPaymentMethod === "cash" ? "bold" : "normal"
+                        }}
+                      >
+                        <Banknote size={14} /> Cash Guarantee
+                      </span>
                     </div>
-                    <strong>Rs. {Number(inspectionFee.inspectionCharge || 0).toLocaleString()}</strong>
-                  </div>
 
-                  <div className="quotation-total">
-                    <div>
-                      <small>TOTAL INSPECTION FEE</small>
-                      <span>Pre-payment required to dispatch mechanic</span>
+                    {/* Demo Payment simulation button */}
+                    <div style={{ marginTop: "18px" }}>
+                      <button
+                        type="button"
+                        className="gh-next-button"
+                        style={{ width: "100%", justifyContent: "center", padding: "14px", fontSize: "15px" }}
+                        onClick={() => setShowDemoModal(true)}
+                        disabled={actionLoading || !mechanic}
+                      >
+                        Pay Inspection Fee (Demo Simulation) - Rs. {Number(inspectionFee.totalAmount || 0).toLocaleString()}
+                        <ArrowRight size={16} />
+                      </button>
                     </div>
-                    <strong>Rs. {Number(inspectionFee.totalAmount || 0).toLocaleString()}</strong>
+                  </>
+                ) : (
+                  <div style={{ textAlign: "center", padding: "32px 16px" }}>
+                    <Timer size={36} color="#1453ff" style={{ marginBottom: "12px" }} />
+                    <h3 style={{ fontSize: "16px", color: "#14203b", marginBottom: "8px" }}>
+                      Waiting for Inspection Fee
+                    </h3>
+                    <p style={{ fontSize: "13px", color: "#66728a", lineHeight: "1.6" }}>
+                      Your mechanic <strong>{mechanic?.name}</strong> is reviewing your request and will submit the inspection fee shortly. This page refreshes automatically.
+                    </p>
+                    <div style={{ marginTop: "16px", fontSize: "12px", color: "#aab0c0" }}>
+                      ● Checking for updates...
+                    </div>
                   </div>
-                </div>
-
-                <div className="guarantee-note" style={{ background: "#eef4ff", border: "1px solid #c9daff", padding: "12px", borderRadius: "10px", marginTop: "14px" }}>
-                  <CircleCheck size={16} color="#1453ff" />
-                  <p style={{ margin: 0, fontSize: "12px", color: "#223567" }}>
-                    <strong>Notice:</strong> This inspection fee confirms the mechanic dispatch. The mechanic will NOT travel until this fee is paid.
-                  </p>
-                </div>
-
-                <p className="settlement-title" style={{ marginTop: "14px" }}>Choose Demo Payment Method:</p>
-                <div className="settlement-chips">
-                  <span
-                    onClick={() => setSelectedPaymentMethod("card")}
-                    style={{
-                      cursor: "pointer",
-                      border: selectedPaymentMethod === "card" ? "2px solid #1453ff" : "1px solid #dfe3ee",
-                      background: selectedPaymentMethod === "card" ? "#eef2ff" : "#fff",
-                      fontWeight: selectedPaymentMethod === "card" ? "bold" : "normal"
-                    }}
-                  >
-                    <CreditCard size={14} /> Card (Demo)
-                  </span>
-                  <span
-                    onClick={() => setSelectedPaymentMethod("qr")}
-                    style={{
-                      cursor: "pointer",
-                      border: selectedPaymentMethod === "qr" ? "2px solid #1453ff" : "1px solid #dfe3ee",
-                      background: selectedPaymentMethod === "qr" ? "#eef2ff" : "#fff",
-                      fontWeight: selectedPaymentMethod === "qr" ? "bold" : "normal"
-                    }}
-                  >
-                    <QrCode size={14} /> LankaQR (Demo)
-                  </span>
-                  <span
-                    onClick={() => setSelectedPaymentMethod("cash")}
-                    style={{
-                      cursor: "pointer",
-                      border: selectedPaymentMethod === "cash" ? "2px solid #1453ff" : "1px solid #dfe3ee",
-                      background: selectedPaymentMethod === "cash" ? "#eef2ff" : "#fff",
-                      fontWeight: selectedPaymentMethod === "cash" ? "bold" : "normal"
-                    }}
-                  >
-                    <Banknote size={14} /> Cash Guarantee
-                  </span>
-                </div>
-
-                {/* Demo Payment simulation button */}
-                <div style={{ marginTop: "18px" }}>
-                  <button
-                    type="button"
-                    className="gh-next-button"
-                    style={{ width: "100%", justifyContent: "center", padding: "14px", fontSize: "15px" }}
-                    onClick={() => setShowDemoModal(true)}
-                    disabled={actionLoading || !mechanic}
-                  >
-                    Pay Inspection Fee (Demo Simulation) - Rs. {Number(inspectionFee.totalAmount || 0).toLocaleString()}
-                    <ArrowRight size={16} />
-                  </button>
-                </div>
+                )}
               </section>
             </div>
           </div>
@@ -445,15 +544,17 @@ function MechanicFound() {
                 Reject Mechanic &amp; Find Next
               </button>
 
-              <button
-                type="button"
-                className="gh-next-button"
-                onClick={() => setShowDemoModal(true)}
-                disabled={actionLoading || !mechanic}
-              >
-                {actionLoading ? "Processing..." : "Pay Inspection Fee"}
-                <ArrowRight size={16} />
-              </button>
+              {inspectionFee && (
+                <button
+                  type="button"
+                  className="gh-next-button"
+                  onClick={() => setShowDemoModal(true)}
+                  disabled={actionLoading || !mechanic}
+                >
+                  {actionLoading ? "Processing..." : "Pay Inspection Fee"}
+                  <ArrowRight size={16} />
+                </button>
+              )}
             </div>
           </div>
         </div>

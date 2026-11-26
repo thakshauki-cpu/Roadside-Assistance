@@ -69,6 +69,13 @@ const mechanicProfileSchema = new mongoose.Schema(
       default: false,
     },
 
+    serviceRadius: {
+      type: Number,
+      default: 25,
+      min: 1,
+      max: 200,
+    },
+
     isVerified: {
       type: Boolean,
       default: false,
@@ -81,6 +88,8 @@ const mechanicProfileSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+mechanicProfileSchema.index({ "location.coordinates": "2dsphere" });
 
 const MechanicProfile = mongoose.model(
   "MechanicProfile",

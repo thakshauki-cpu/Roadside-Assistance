@@ -1,76 +1,132 @@
 import { Server } from "socket.io";
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
+import ServiceRequest from "./models/ServiceRequest.js";
 
 let io = null;
+
+const getAllowedOrigins = () =>
+  (process.env.CORS_ORIGIN || "http://localhost:5173,http://127.0.0.1:5173")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+const verifySocketToken = (token) => {
+  if (!token) return null;
+
+  if (process.env.JWT_SECRET) {
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      if (decoded?.id) {
+        return {
+          id: decoded.id.toString(),
+          role: decoded.role || "customer",
+        };
+      }
+    } catch {
+      // Fall through to admin secret check
+    }
+  }
+
+  if (process.env.ADMIN_JWT_SECRET) {
+    try {
+      const decodedAdmin = jwt.verify(token, process.env.ADMIN_JWT_SECRET);
+      if (decodedAdmin?.id) {
+        return {
+          id: decodedAdmin.id.toString(),
+          role: "admin",
+        };
+      }
+    } catch {
+      // Invalid token
+    }
+  }
+
+  return null;
+};
 
 export const initSocket = (httpServer) => {
   io = new Server(httpServer, {
     cors: {
-      origin: "*",
+      origin: getAllowedOrigins(),
       methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
       credentials: true,
     },
   });
 
-  // Optional socket authentication
+  // Strict JWT authentication — reject unauthenticated or invalid tokens
   io.use((socket, next) => {
-    try {
-      const token =
-        socket.handshake.auth?.token ||
-        socket.handshake.headers?.authorization?.replace("Bearer ", "");
+    const rawAuth =
+      socket.handshake.auth?.token ||
+      socket.handshake.headers?.authorization?.replace(/^Bearer\s+/i, "");
 
-      if (token) {
-        // Try user JWT first
-        try {
-          const decoded = jwt.verify(
-            token,
-            process.env.JWT_SECRET || "roadmate_secret_key"
-          );
-          socket.user = decoded;
-          return next();
-        } catch {
-          // Try admin JWT
-          if (process.env.ADMIN_JWT_SECRET) {
-            try {
-              const decodedAdmin = jwt.verify(
-                token,
-                process.env.ADMIN_JWT_SECRET
-              );
-              socket.user = { ...decodedAdmin, role: "admin" };
-              return next();
-            } catch {
-              // Allow unauthenticated connection with guest socket
-            }
-          }
-        }
-      }
-      return next();
-    } catch {
-      return next();
+    const user = verifySocketToken(rawAuth);
+    if (!user) {
+      return next(new Error("Authentication failed: valid JWT required."));
     }
+
+    socket.user = user;
+    return next();
   });
 
   io.on("connection", (socket) => {
     const user = socket.user;
 
-    if (user?.id) {
-      // User room
-      socket.join(`user_${user.id}`);
+    // User-specific room
+    socket.join(`user_${user.id}`);
 
-      // Role rooms
-      if (user.role === "mechanic") {
-        socket.join("role_mechanic");
-      } else if (user.role === "admin") {
-        socket.join("role_admin");
-      } else if (user.role === "customer") {
-        socket.join("role_customer");
-      }
+    // Role-based rooms
+    if (user.role === "mechanic") {
+      socket.join("role_mechanic");
+    } else if (user.role === "admin") {
+      socket.join("role_admin");
+    } else if (user.role === "customer") {
+      socket.join("role_customer");
     }
 
-    // Join / leave specific service request rooms
-    socket.on("join_request", (requestId) => {
-      if (requestId) {
+    // Authorize request room join using MongoDB ownership/assignment/admin check
+    socket.on("join_request", async (requestId, ack) => {
+      try {
+        if (!requestId || !mongoose.Types.ObjectId.isValid(requestId)) {
+          if (typeof ack === "function") {
+            ack({ ok: false, message: "Invalid service request ID." });
+          }
+          return;
+        }
+
+        if (user.role === "admin") {
+          socket.join(`request_${requestId}`);
+          if (typeof ack === "function") ack({ ok: true, requestId });
+          return;
+        }
+
+        const request = await ServiceRequest.findById(requestId)
+          .select("customer mechanic")
+          .lean();
+
+        if (!request) {
+          if (typeof ack === "function") {
+            ack({ ok: false, message: "Service request not found." });
+          }
+          return;
+        }
+
+        const isCustomerOwner = request.customer?.toString() === user.id;
+        const isAssignedMechanic = request.mechanic?.toString() === user.id;
+
+        if (!isCustomerOwner && !isAssignedMechanic) {
+          if (typeof ack === "function") {
+            ack({ ok: false, message: "Not authorized to join this request room." });
+          }
+          return;
+        }
+
         socket.join(`request_${requestId}`);
+        if (typeof ack === "function") ack({ ok: true, requestId });
+      } catch (err) {
+        if (typeof ack === "function") {
+          ack({ ok: false, message: "Unable to authorize request room." });
+        }
       }
     });
 
@@ -81,7 +137,7 @@ export const initSocket = (httpServer) => {
     });
 
     socket.on("disconnect", () => {
-      // Clean up if needed
+      // Room memberships are cleaned up automatically by Socket.IO
     });
   });
 
@@ -111,11 +167,5 @@ export const emitToAdmins = (event, data) => {
 export const emitToRequest = (requestId, event, data) => {
   if (io && requestId) {
     io.to(`request_${requestId.toString()}`).emit(event, data);
-  }
-};
-
-export const emitGlobal = (event, data) => {
-  if (io) {
-    io.emit(event, data);
   }
 };

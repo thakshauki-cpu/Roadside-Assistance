@@ -7,7 +7,8 @@ const request = async (path, options = {}) => {
     );
   }
 
-  const token = localStorage.getItem("token");
+  const token =
+    localStorage.getItem("token") || sessionStorage.getItem("token");
   if (!token) {
     throw new Error("Please login again to continue your service request.");
   }
@@ -111,3 +112,8 @@ export const submitCustomerReview = (requestId, review) =>
 
 export const getServiceSummary = (requestId) =>
   request(requestPath(requestId, "summary"));
+
+export const retryServiceRequest = (requestId) =>
+  request(`/api/service-requests/${encodeURIComponent(requestId)}/retry`, {
+    method: "POST",
+  });

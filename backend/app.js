@@ -10,9 +10,19 @@ import getHelpRoutes from "./routes/getHelpRoutes.js";
 import customerRoutes from "./routes/customerRoutes.js";
 const app = express();
 
-//Middlewaree
-app.use(cors());      //cors()  frontend-lirundhu backend API requests varuvatharku allow pannum.
-app.use (express.json());
+const allowedOrigins = (process.env.CORS_ORIGIN || "http://localhost:5173,http://127.0.0.1:5173")
+  .split(",")
+  .map((o) => o.trim())
+  .filter(Boolean);
+
+// Middleware
+app.use(
+  cors({
+    origin: allowedOrigins,
+    credentials: true,
+  })
+);
+app.use(express.json());
 
 
 //Test route

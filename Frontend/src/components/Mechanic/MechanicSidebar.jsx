@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 
 import logo from "../../assets/logo.png";
+import { disconnectSocket } from "../../socket";
 
 const menuItems = [
   {
@@ -58,6 +59,9 @@ function MechanicSidebar({
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
+    sessionStorage.removeItem("token");
+    sessionStorage.removeItem("user");
+    disconnectSocket();
     navigate("/login");
   };
 

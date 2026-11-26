@@ -1,6 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { LayoutDashboard, Users, Store, ShieldCheck, Banknote, Star, Settings, LogOut } from "lucide-react";
 import logo from "../../assets/logo.png";
+import { disconnectSocket } from "../../socket";
 
 // Each menu item: name, icon and the page it opens
 const menuItems = [
@@ -23,6 +24,7 @@ function AdminSidebar({ activeItem }) {
     sessionStorage.removeItem("adminToken");
     sessionStorage.removeItem("adminUser");
     localStorage.removeItem("adminLoggedIn");
+    disconnectSocket();
     navigate("/login", { replace: true });
   };
 

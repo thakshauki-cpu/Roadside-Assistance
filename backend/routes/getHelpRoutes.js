@@ -3,7 +3,6 @@ import { protect } from "../middleware/authMiddleware.js";
 import {
   getNearbyMechanics,
   getAssignment,
-  respondToQuotation,
   payInspectionFee,
   getTracking,
   respondToRepairQuotation,
@@ -20,10 +19,9 @@ import {
 const router = express.Router();
 
 router.use(protect);
-
+ 
 router.get("/:requestId/nearby-mechanics", getNearbyMechanics);
 router.get("/:requestId/assignment", getAssignment);
-router.post("/:requestId/quotation-response", respondToQuotation);
 router.post("/:requestId/pay-inspection", payInspectionFee);
 router.get("/:requestId/tracking", getTracking);
 router.post("/:requestId/repair-quotation-response", respondToRepairQuotation);

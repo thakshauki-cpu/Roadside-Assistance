@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import {
   AlertTriangle,
@@ -31,6 +31,7 @@ import {
   mechanicCompleteInspection,
   submitRepairQuotation,
   mechanicCompleteRepair,
+  updateMechanicGpsLocation,
 } from "../../../api/mechanic";
 import { getSocket } from "../../../socket";
 
@@ -56,6 +57,13 @@ function ServiceRequests() {
 
   const [actionFeedback, setActionFeedback] = useState(null);
   const [submittingAction, setSubmittingAction] = useState(false);
+  const [gpsStatus, setGpsStatus] = useState({
+    state: "idle",
+    message: "",
+    accuracy: null,
+    updatedAt: null,
+  });
+  const lastGpsSentRef = useRef(0);
 
   // Inspection Fee Form state
   const [travelFee, setTravelFee] = useState("500");
@@ -102,40 +110,136 @@ function ServiceRequests() {
 
     loadAllRequests(true);
 
-    // Periodic polling every 4 seconds to reflect customer actions in real time
-    const pollInterval = setInterval(() => {
-      loadAllRequests(false);
-    }, 4000);
-
-    // Real-time socket updates
+    // Real-time Socket.IO updates (no polling)
     const socket = getSocket();
     if (socket) {
       const handleSocketUpdate = () => {
         loadAllRequests(false);
       };
 
-      socket.on("new_service_request", handleSocketUpdate);
-      socket.on("inspection_paid", handleSocketUpdate);
-      socket.on("quotation_response", handleSocketUpdate);
-      socket.on("repair_payment_completed", handleSocketUpdate);
-      socket.on("service_request_updated", handleSocketUpdate);
+      const handleRequestAccepted = (payload) => {
+        if (payload?.requestId) {
+          setPendingRequests((prev) =>
+            prev.filter((r) => r._id !== payload.requestId)
+          );
+        }
+        loadAllRequests(false);
+      };
+
+      const events = [
+        "new_service_request",
+        "service_request_rejected",
+        "inspection_payment_completed",
+        "inspection_paid",
+        "repair_quotation_accepted",
+        "repair_quotation_rejected",
+        "repair_payment_completed",
+        "service_request_updated",
+        "connect",
+      ];
+      events.forEach((ev) => socket.on(ev, handleSocketUpdate));
+      socket.on("service_request_accepted", handleRequestAccepted);
 
       return () => {
         active = false;
-        clearInterval(pollInterval);
-        socket.off("new_service_request", handleSocketUpdate);
-        socket.off("inspection_paid", handleSocketUpdate);
-        socket.off("quotation_response", handleSocketUpdate);
-        socket.off("repair_payment_completed", handleSocketUpdate);
-        socket.off("service_request_updated", handleSocketUpdate);
+        events.forEach((ev) => socket.off(ev, handleSocketUpdate));
+        socket.off("service_request_accepted", handleRequestAccepted);
       };
     }
 
     return () => {
       active = false;
-      clearInterval(pollInterval);
     };
   }, [loadAllRequests]);
+
+  // Real GPS location tracking using navigator.geolocation.watchPosition()
+  // Starts ONLY when an assigned request is in "on_the_way" status; stops automatically otherwise.
+  const activeOnTheWayRequest = assignedRequests.find(
+    (r) => r.status === "on_the_way"
+  );
+  const activeOnTheWayId = activeOnTheWayRequest?._id || null;
+
+  useEffect(() => {
+    if (!activeOnTheWayId) {
+      setGpsStatus({ state: "idle", message: "", accuracy: null, updatedAt: null });
+      return undefined;
+    }
+
+    if (!navigator.geolocation) {
+      setGpsStatus({
+        state: "unsupported",
+        message: "Geolocation is not supported by this browser.",
+        accuracy: null,
+        updatedAt: null,
+      });
+      return undefined;
+    }
+
+    setGpsStatus({
+      state: "watching",
+      message: "Acquiring live GPS signal...",
+      accuracy: null,
+      updatedAt: null,
+    });
+
+    const watchId = navigator.geolocation.watchPosition(
+      async (position) => {
+        const now = Date.now();
+        if (now - lastGpsSentRef.current < 4000) return;
+        lastGpsSentRef.current = now;
+
+        const { latitude, longitude, accuracy } = position.coords;
+        try {
+          await updateMechanicGpsLocation(activeOnTheWayId, {
+            latitude,
+            longitude,
+            accuracy,
+          });
+          setGpsStatus({
+            state: "watching",
+            message:
+              accuracy && accuracy > 100
+                ? `Live GPS active (low accuracy: ~${Math.round(accuracy)}m)`
+                : "Live GPS location sharing active",
+            accuracy: accuracy ? Math.round(accuracy) : null,
+            updatedAt: new Date(),
+          });
+        } catch (err) {
+          setGpsStatus({
+            state: "error",
+            message: err.message || "Unable to send GPS update to server.",
+            accuracy: null,
+            updatedAt: null,
+          });
+        }
+      },
+      (geoError) => {
+        let message = "Unable to retrieve GPS location.";
+        if (geoError.code === geoError.PERMISSION_DENIED) {
+          message = "GPS permission denied. Please allow location access to share live tracking.";
+        } else if (geoError.code === geoError.POSITION_UNAVAILABLE) {
+          message = "GPS position is currently unavailable.";
+        } else if (geoError.code === geoError.TIMEOUT) {
+          message = "GPS location request timed out. Retrying...";
+        }
+        setGpsStatus({
+          state: "error",
+          message,
+          accuracy: null,
+          updatedAt: null,
+        });
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 5000,
+      }
+    );
+
+    return () => {
+      navigator.geolocation.clearWatch(watchId);
+    };
+  }, [activeOnTheWayId]);
 
   const handleToggleAvailability = useCallback(async () => {
     if (!profile || availabilityUpdating) return;
@@ -675,9 +779,21 @@ function ServiceRequests() {
                           <Navigation color="#2563eb" size={20} />
                           <strong style={{ color: "#1e40af", fontSize: "16px" }}>Currently Travelling to Location</strong>
                         </div>
-                        <p style={{ margin: "0 0 14px", fontSize: "13px", color: "#1e3a8a" }}>
+                        <p style={{ margin: "0 0 10px", fontSize: "13px", color: "#1e3a8a" }}>
                           The customer is tracking your route. Click below once you arrive at the vehicle breakdown spot.
                         </p>
+                        {gpsStatus.message && (
+                          <p
+                            style={{
+                              margin: "0 0 12px",
+                              fontSize: "12px",
+                              fontWeight: 600,
+                              color: gpsStatus.state === "error" || gpsStatus.state === "unsupported" ? "#b91c1c" : "#15803d",
+                            }}
+                          >
+                            {gpsStatus.message}
+                          </p>
+                        )}
                         <button
                           type="button"
                           className="gh-next-button"

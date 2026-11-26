@@ -2,11 +2,13 @@ import express from "express";
 import {
   acceptServiceRequest,
   createServiceRequest,
+  retryServiceRequest,
   getPendingServiceRequests,
   getAssignedServiceRequests,
   rejectServiceRequest,
   submitInspectionFee,
   mechanicStartTravel,
+  updateMechanicLocation,
   mechanicMarkArrived,
   mechanicStartInspection,
   mechanicCompleteInspection,
@@ -62,6 +64,13 @@ router.patch(
 );
 
 router.patch(
+  "/mechanic/:requestId/location",
+  protect,
+  requireMechanic,
+  updateMechanicLocation
+);
+
+router.patch(
   "/mechanic/:requestId/arrived",
   protect,
   requireMechanic,
@@ -99,5 +108,6 @@ router.patch(
 // Customer routes
 // Create a new service request
 router.post("/", protect, createServiceRequest);
+router.post("/:requestId/retry", protect, retryServiceRequest);
 
 export default router;

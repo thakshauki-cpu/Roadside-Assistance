@@ -43,6 +43,8 @@ import {
   readRequest,
 } from "./requestSampleData";
 import { getSocket, joinRequestRoom, leaveRequestRoom } from "../../../socket";
+import { MapContainer, TileLayer, CircleMarker, Popup } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
 import "../../styles/GetHelp.css";
 import "../../styles/Tracking.css";
 
@@ -97,12 +99,7 @@ function Tracking() {
   useEffect(() => {
     loadTrackingData(true);
 
-    // Periodic API polling every 3 seconds for live status updates
-    const pollInterval = setInterval(() => {
-      loadTrackingData(false);
-    }, 3000);
-
-    // Socket.io real-time updates
+    // Socket.io real-time updates (no polling)
     const socket = getSocket();
     if (socket && requestId) {
       joinRequestRoom(requestId);
@@ -111,34 +108,51 @@ function Tracking() {
         loadTrackingData(false);
       };
 
-      socket.on("service_request_updated", handleUpdate);
-      socket.on("mechanic_status_update", handleUpdate);
-      socket.on("quotation_received", handleUpdate);
-      socket.on("repair_completed", handleUpdate);
+      const handleLocationUpdate = (payload) => {
+        if (payload?.requestId && payload.requestId !== requestId) return;
+        if (payload?.mechanicLocation) {
+          setTracking((prev) =>
+            prev
+              ? { ...prev, mechanicLocation: payload.mechanicLocation }
+              : prev
+          );
+        }
+      };
+
+      const handleReconnect = () => {
+        joinRequestRoom(requestId);
+        loadTrackingData(false);
+      };
+
+      const events = [
+        "service_request_updated",
+        "service_request_accepted",
+        "inspection_fee_submitted",
+        "inspection_payment_completed",
+        "mechanic_on_the_way",
+        "mechanic_arrived",
+        "inspection_started",
+        "inspection_completed",
+        "repair_quotation_submitted",
+        "repair_quotation_accepted",
+        "repair_quotation_rejected",
+        "repair_completed",
+        "repair_payment_completed",
+      ];
+      events.forEach((ev) => socket.on(ev, handleUpdate));
+      socket.on("mechanic_location_updated", handleLocationUpdate);
+      socket.on("connect", handleReconnect);
 
       return () => {
-        clearInterval(pollInterval);
         leaveRequestRoom(requestId);
-        socket.off("service_request_updated", handleUpdate);
-        socket.off("mechanic_status_update", handleUpdate);
-        socket.off("quotation_received", handleUpdate);
-        socket.off("repair_completed", handleUpdate);
+        events.forEach((ev) => socket.off(ev, handleUpdate));
+        socket.off("mechanic_location_updated", handleLocationUpdate);
+        socket.off("connect", handleReconnect);
       };
     }
 
-    return () => clearInterval(pollInterval);
+    return undefined;
   }, [loadTrackingData, requestId]);
-
-  useEffect(() => {
-    loadTrackingData(true);
-
-    // Periodic API polling every 3 seconds for live status updates
-    const pollInterval = setInterval(() => {
-      loadTrackingData(false);
-    }, 3000);
-
-    return () => clearInterval(pollInterval);
-  }, [loadTrackingData]);
 
   useEffect(() => {
     const timer = setInterval(() => setElapsed((previous) => previous + 1), 1000);
@@ -225,9 +239,7 @@ function Tracking() {
 
   const mechanic = tracking.mechanic || assignment?.mechanic || {
     name: "Assigned Technician",
-    phone: "+94 77 123 4567",
-    rating: 4.8,
-    ratingCount: 88,
+    phone: null,
   };
 
   const currentStatus = tracking.status || "accepted";
@@ -579,20 +591,62 @@ function Tracking() {
               {/* Map panel */}
               <section className="track-map-card">
                 <div className="track-map-wrap">
-                  <div className="track-mock-map">
-                    <div className="map-radar" />
-                    <div className="map-vehicle-marker">
-                      <CarFront size={18} />
-                      <span>{plate}</span>
-                    </div>
+                  {(() => {
+                    const custCoords = tracking?.serviceRequest?.location?.coordinates || saved.location?.coordinates;
+                    const hasCustCoords =
+                      Array.isArray(custCoords) &&
+                      custCoords.length === 2 &&
+                      Number.isFinite(custCoords[0]) &&
+                      Number.isFinite(custCoords[1]);
+                    const custLatLng = hasCustCoords ? [custCoords[1], custCoords[0]] : null;
 
-                    {isOnTheWay && (
-                      <div className="map-mechanic-marker">
-                        <Truck size={18} />
-                        <span>{mechanic.name || "Technician"}</span>
-                      </div>
-                    )}
-                  </div>
+                    const mechCoords = tracking?.mechanicLocation?.coordinates;
+                    const hasMechCoords =
+                      Array.isArray(mechCoords) &&
+                      mechCoords.length === 2 &&
+                      Number.isFinite(mechCoords[0]) &&
+                      Number.isFinite(mechCoords[1]);
+                    const mechLatLng = hasMechCoords ? [mechCoords[1], mechCoords[0]] : null;
+
+                    const center = mechLatLng || custLatLng || [7.7102, 81.6924];
+
+                    return (
+                      <MapContainer
+                        center={center}
+                        zoom={14}
+                        style={{ width: "100%", height: "320px", borderRadius: "12px" }}
+                        scrollWheelZoom={false}
+                      >
+                        <TileLayer
+                          attribution="&copy; OpenStreetMap contributors"
+                          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                        />
+                        {custLatLng && (
+                          <CircleMarker
+                            center={custLatLng}
+                            radius={9}
+                            pathOptions={{ color: "#1453ff", fillColor: "#1453ff", fillOpacity: 0.85 }}
+                          >
+                            <Popup>Your Breakdown Location ({plate})</Popup>
+                          </CircleMarker>
+                        )}
+                        {isOnTheWay && mechLatLng && (
+                          <CircleMarker
+                            center={mechLatLng}
+                            radius={10}
+                            pathOptions={{ color: "#16a34a", fillColor: "#22c55e", fillOpacity: 0.9 }}
+                          >
+                            <Popup>
+                              {mechanic.name || "Mechanic"} (Live GPS)
+                              {tracking?.mechanicLocation?.updatedAt
+                                ? ` • Updated ${new Date(tracking.mechanicLocation.updatedAt).toLocaleTimeString()}`
+                                : ""}
+                            </Popup>
+                          </CircleMarker>
+                        )}
+                      </MapContainer>
+                    );
+                  })()}
 
                   <div className="track-map-overlay">
                     <span className="track-eta-chip">
@@ -600,7 +654,9 @@ function Tracking() {
                       {hasArrived
                         ? "Technician On-Site"
                         : isOnTheWay
-                        ? "Mechanic Traveling (ETA ~8 mins)"
+                        ? tracking?.mechanicLocation?.coordinates
+                          ? "Live Mechanic GPS Active"
+                          : "Mechanic On The Way (Awaiting GPS signal)"
                         : isInspectionPaid
                         ? "Payment Confirmed - Dispatching Mechanic"
                         : "Inspection Payment Required"}

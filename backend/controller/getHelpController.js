@@ -1,20 +1,13 @@
 import mongoose from "mongoose";
-import MechanicProfile from "../models/MechanicProfile.js";
-import Review from "../models/Review.js";
 import ServiceRequest from "../models/ServiceRequest.js";
 import Payment from "../models/Payment.js";
-import {
-  mockQuotation,
-  mockTracking,
-  mockWorkByProblem,
-  mockWorkflowState,
-} from "../data/getHelpMockData.js";
 import { createWorkflowNotification } from "./notificationController.js";
 import {
   emitToUser,
   emitToAdmins,
   emitToRequest,
 } from "../socket.js";
+import { findEligibleMechanicsForRequest } from "../utils/mechanicMatching.js";
 
 const findOwnedRequest = async (req, res) => {
   const { requestId } = req.params;
@@ -45,142 +38,6 @@ const findOwnedRequest = async (req, res) => {
   return request;
 };
 
-const getWorkflowState = (requestId) => {
-  if (!mockWorkflowState.has(requestId)) {
-    mockWorkflowState.set(requestId, {
-      quotationResponse: null,
-      rejectedMechanicIds: [],
-      currentSuggestedMechanicId: null,
-      acceptedMechanicId: null,
-      completion: null,
-      payment: null,
-    });
-  }
-
-  return mockWorkflowState.get(requestId);
-};
-
-const EARTH_RADIUS_KM = 6371;
-
-const getCustomerCoordinates = (request) => {
-  const coordinates = request.location?.coordinates;
-  if (!Array.isArray(coordinates) || coordinates.length !== 2) return null;
-
-  const [longitude, latitude] = coordinates;
-  if (
-    !Number.isFinite(latitude) ||
-    !Number.isFinite(longitude) ||
-    latitude < -90 ||
-    latitude > 90 ||
-    longitude < -180 ||
-    longitude > 180
-  ) {
-    return null;
-  }
-
-  return { latitude, longitude };
-};
-
-const calculateDistanceKm = (first, second) => {
-  const toRadians = (degrees) => (degrees * Math.PI) / 180;
-  const latitudeDifference = toRadians(second.latitude - first.latitude);
-  const longitudeDifference = toRadians(second.longitude - first.longitude);
-  const haversine =
-    Math.sin(latitudeDifference / 2) ** 2 +
-    Math.cos(toRadians(first.latitude)) *
-      Math.cos(toRadians(second.latitude)) *
-      Math.sin(longitudeDifference / 2) ** 2;
-
-  return (
-    2 *
-    EARTH_RADIUS_KM *
-    Math.asin(Math.sqrt(Math.min(1, Math.max(0, haversine))))
-  );
-};
-
-const getEligibleMechanics = async (request, state) => {
-  const customerCoordinates = getCustomerCoordinates(request);
-  if (!customerCoordinates) return null;
-
-  const assignedMechanicId = request.mechanic?._id || request.mechanic;
-  const excludedMechanics = [
-    ...(request.rejectedMechanics || []),
-    ...state.rejectedMechanicIds,
-  ];
-  const profiles = await MechanicProfile.find(
-    assignedMechanicId
-      ? { user: assignedMechanicId, isVerified: true, verificationStatus: "approved" }
-      : {
-          isAvailable: true,
-          isVerified: true,
-          verificationStatus: "approved",
-          user: { $nin: excludedMechanics },
-        }
-  )
-    .populate("user", "fullName mobile email")
-    .lean();
-
-  const mechanicIds = profiles.map((profile) => profile.user?._id).filter(Boolean);
-  const [ratingRows, completedRows] = await Promise.all([
-    Review.aggregate([
-      { $match: { mechanicId: { $in: mechanicIds } } },
-      {
-        $group: {
-          _id: "$mechanicId",
-          averageRating: { $avg: "$rating" },
-          totalReviews: { $sum: 1 },
-        },
-      },
-    ]),
-    ServiceRequest.aggregate([
-      {
-        $match: {
-          mechanic: { $in: mechanicIds },
-          status: "completed",
-        },
-      },
-      { $group: { _id: "$mechanic", total: { $sum: 1 } } },
-    ]),
-  ]);
-  const ratingsByMechanic = new Map(
-    ratingRows.map((row) => [row._id.toString(), row])
-  );
-  const completionsByMechanic = new Map(
-    completedRows.map((row) => [row._id.toString(), row.total])
-  );
-
-  return profiles
-    .map((profile) => {
-      const mechanicId = profile.user._id.toString();
-      const [longitude, latitude] = profile.location?.coordinates || [];
-      const hasCoordinates =
-        Number.isFinite(longitude) &&
-        Number.isFinite(latitude) &&
-        longitude >= -180 &&
-        longitude <= 180 &&
-        latitude >= -90 &&
-        latitude <= 90;
-      const distance = hasCoordinates
-        ? calculateDistanceKm(customerCoordinates, { latitude, longitude })
-        : null;
-      const rating = ratingsByMechanic.get(mechanicId);
-      const completedJobs = completionsByMechanic.get(mechanicId) || 0;
-
-      return {
-        id: mechanicId,
-        name: profile.businessName || profile.user.fullName,
-        phone: profile.phone || profile.user.mobile,
-        specialty: profile.services?.[0] || "General Mechanic",
-        rating: rating ? Number(rating.averageRating.toFixed(1)) : 4.8,
-        ratingCount: rating?.totalReviews || 12,
-        completedJobs,
-        distanceKm: distance !== null ? Number(distance.toFixed(1)) : 2.5,
-        location: profile.location?.address || "Batticaloa",
-        isAssigned: assignedMechanicId?.toString() === mechanicId,
-      };
-    })
-    .sort((a, b) => a.distanceKm - b.distanceKm);
-};
 
 const getRequestReference = (requestId) =>
   `#RM-${requestId.slice(-5).toUpperCase()}`;
@@ -198,24 +55,18 @@ export const getNearbyMechanics = async (req, res) => {
     const request = await findOwnedRequest(req, res);
     if (!request) return;
 
-    const state = getWorkflowState(request.id);
-    let mechanics = await getEligibleMechanics(request, state);
+    const matching = await findEligibleMechanicsForRequest(request);
+    const mechanics = matching.eligible || [];
 
-    if (!mechanics || mechanics.length === 0) {
-      mechanics = [
-        {
-          id: "default-mechanic",
-          name: "Siva Auto Care",
-          phone: "+94 65 222 4190",
-          specialty: "NVQ-4 Auto Technician",
-          rating: 4.9,
-          ratingCount: 142,
-          completedJobs: 184,
-          distanceKm: 2.1,
-          location: "Kallady Bridge Rd",
-          isAssigned: true,
-        },
-      ];
+    if (mechanics.length === 0) {
+      return res.status(200).json({
+        success: true,
+        requestId: request.id,
+        requestReference: getRequestReference(request.id),
+        mechanics: [],
+        reason: matching.reason || request.noMechanicsReason || "no_mechanics_nearby",
+        message: "No eligible mechanics are currently available in your area.",
+      });
     }
 
     return res.status(200).json({
@@ -223,6 +74,7 @@ export const getNearbyMechanics = async (req, res) => {
       requestId: request.id,
       requestReference: getRequestReference(request.id),
       mechanics,
+      reason: null,
     });
   } catch (error) {
     return handleError(res, "Get nearby mechanics error", error);
@@ -234,65 +86,45 @@ export const getAssignment = async (req, res) => {
     const request = await findOwnedRequest(req, res);
     if (!request) return;
 
-    const state = getWorkflowState(request.id);
-    const mechanics = await getEligibleMechanics(request, state);
-    const assigned = mechanics?.[0] || {
-      id: request.mechanic?._id || "assigned-mech",
-      name: request.mechanic?.fullName || "Assigned Technician",
-      phone: request.mechanic?.mobile || "+94 77 123 4567",
-      specialty: "Roadside Recovery Specialist",
-      rating: 4.8,
-      ratingCount: 88,
-      completedJobs: 95,
-      distanceKm: 2.4,
-      location: "Batticaloa Central",
-      isAssigned: true,
-    };
+    const matching = await findEligibleMechanicsForRequest(request);
+    let assigned = null;
+
+    if (request.mechanic) {
+      assigned = matching.eligible?.[0] || {
+        id: request.mechanic?._id?.toString() || request.mechanic?.toString(),
+        name: request.mechanic?.fullName || "Assigned Technician",
+        phone: request.mechanic?.mobile || null,
+        specialty: null,
+        rating: null,
+        ratingCount: 0,
+        completedJobs: null,
+        distanceKm: null,
+        location: null,
+        isAssigned: true,
+      };
+    }
 
     return res.status(200).json({
       success: true,
       requestId: request.id,
       requestReference: getRequestReference(request.id),
       mechanic: assigned,
+      noMechanicsAvailable: !request.mechanic && Boolean(request.noMechanicsAvailable || matching.eligible.length === 0),
+      matchingReason: request.mechanic ? null : (matching.reason || request.noMechanicsReason || null),
       inspectionFee: request.inspectionFee,
       inspectionPayment: request.inspectionPayment,
       status: request.status,
       quotation: {
-        total: request.inspectionFee?.totalAmount || mockQuotation.total,
-        labour: request.inspectionFee?.inspectionCharge || mockQuotation.labour,
-        travel: request.inspectionFee?.travelFee || 500,
-        visit: request.inspectionFee?.visitFee || 500,
+        total: request.inspectionFee?.totalAmount || 0,
+        labour: request.inspectionFee?.inspectionCharge || 0,
+        travel: request.inspectionFee?.travelFee || 0,
+        visit: request.inspectionFee?.visitFee || 0,
         quotationHoldSeconds: 300,
       },
       serviceRequest: request,
     });
   } catch (error) {
     return handleError(res, "Get assignment error", error);
-  }
-};
-
-export const respondToQuotation = async (req, res) => {
-  try {
-    const request = await findOwnedRequest(req, res);
-    if (!request) return;
-
-    const { decision } = req.body || {};
-    if (!["accepted", "rejected"].includes(decision)) {
-      return res.status(400).json({
-        success: false,
-        message: "Decision must be 'accepted' or 'rejected'.",
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      requestId: request.id,
-      decision,
-      status: request.status,
-      serviceRequest: request,
-    });
-  } catch (error) {
-    return handleError(res, "Quotation response error", error);
   }
 };
 
@@ -375,12 +207,18 @@ export const payInspectionFee = async (req, res) => {
       .lean();
 
     // Socket broadcasts
-    emitToUser(
-      request.mechanic._id || request.mechanic,
-      "inspection_paid",
-      { serviceRequest: updated, payment: paymentRecord }
-    );
+    const inspPayPayload = {
+      requestId: updated._id,
+      status: updated.status,
+      serviceRequest: updated,
+      payment: paymentRecord,
+    };
+    const mechanicId = request.mechanic._id || request.mechanic;
+    emitToUser(mechanicId, "inspection_payment_completed", inspPayPayload);
+    emitToUser(mechanicId, "inspection_paid", inspPayPayload);
+    emitToAdmins("inspection_payment_completed", inspPayPayload);
     emitToAdmins("service_request_updated", updated);
+    emitToRequest(request._id, "inspection_payment_completed", inspPayPayload);
     emitToRequest(request._id, "service_request_updated", updated);
 
     return res.status(200).json({
@@ -406,18 +244,21 @@ export const getTracking = async (req, res) => {
     const request = await findOwnedRequest(req, res);
     if (!request) return;
 
-    const state = getWorkflowState(request.id);
-    const [mechanicProfile] = await getEligibleMechanics(request, state);
+    // Build mechanic info directly from populated request — no extra DB call needed
+    const mechanicInfo = request.mechanic
+      ? {
+        id: request.mechanic._id?.toString(),
+        name: request.mechanic.fullName || "Assigned Technician",
+        phone: request.mechanic.mobile || null,
+      }
+      : null;
 
     return res.status(200).json({
       success: true,
       requestId: request.id,
       requestReference: getRequestReference(request.id),
       status: request.status,
-      mechanic: mechanicProfile || {
-        name: request.mechanic?.fullName || "Assigned Technician",
-        phone: request.mechanic?.mobile || "+94 77 123 4567",
-      },
+      mechanic: mechanicInfo,
       inspectionFee: request.inspectionFee,
       inspectionPayment: request.inspectionPayment,
       repairQuotation: request.repairQuotation,
@@ -428,6 +269,7 @@ export const getTracking = async (req, res) => {
       inspectionCompletedAt: request.inspectionCompletedAt,
       repairStartedAt: request.repairStartedAt,
       repairCompletedAt: request.repairCompletedAt,
+      mechanicLocation: request.mechanicLocation || null,
       serviceRequest: request,
     });
   } catch (error) {
@@ -500,12 +342,21 @@ export const respondToRepairQuotation = async (req, res) => {
       .lean();
 
     // Socket broadcasts
-    emitToUser(
-      request.mechanic._id || request.mechanic,
-      "quotation_response",
-      { decision, serviceRequest: updated }
-    );
+    const quotEvent =
+      decision === "accepted"
+        ? "repair_quotation_accepted"
+        : "repair_quotation_rejected";
+    const quotRespPayload = {
+      requestId: updated._id,
+      status: updated.status,
+      decision,
+      serviceRequest: updated,
+    };
+    const mechanicId = request.mechanic._id || request.mechanic;
+    emitToUser(mechanicId, quotEvent, quotRespPayload);
+    emitToAdmins(quotEvent, quotRespPayload);
     emitToAdmins("service_request_updated", updated);
+    emitToRequest(request._id, quotEvent, quotRespPayload);
     emitToRequest(request._id, "service_request_updated", updated);
 
     return res.status(200).json({
@@ -600,12 +451,20 @@ export const payRepairFee = async (req, res) => {
       .lean();
 
     // Socket broadcasts
+    const repPayPayload = {
+      requestId: updated._id,
+      status: updated.status,
+      serviceRequest: updated,
+      payment: paymentRecord,
+    };
     emitToUser(
       request.mechanic._id || request.mechanic,
       "repair_payment_completed",
-      { serviceRequest: updated, payment: paymentRecord }
+      repPayPayload
     );
+    emitToAdmins("repair_payment_completed", repPayPayload);
     emitToAdmins("service_request_updated", updated);
+    emitToRequest(request._id, "repair_payment_completed", repPayPayload);
     emitToRequest(request._id, "service_request_updated", updated);
 
     return res.status(200).json({
@@ -630,20 +489,23 @@ export const getCompletion = async (req, res) => {
     const request = await findOwnedRequest(req, res);
     if (!request) return;
 
-    const state = getWorkflowState(request.id);
-    const [mechanicProfile] = await getEligibleMechanics(request, state);
-
-    const problemWork =
-      mockWorkByProblem[request.problem] || mockWorkByProblem.Other;
+    // Build mechanic info directly from populated request
+    const mechanicInfo = request.mechanic
+      ? {
+        id: request.mechanic._id?.toString(),
+        name: request.mechanic.fullName || "Assigned Technician",
+        phone: request.mechanic.mobile || null,
+      }
+      : null;
 
     const completion = {
       status: request.status,
       completedAt:
         request.repairCompletedAt || request.completedAt || new Date().toISOString(),
-      workCompleted: request.repairQuotation?.description || problemWork.work,
-      problemTitle: request.problem || problemWork.title,
-      mechanic: mechanicProfile,
-      responseTimeMinutes: mockTracking.etaMinutes,
+      workCompleted: request.repairQuotation?.description || request.problem || "Vehicle repair completed",
+      problemTitle: request.problem || "Roadside Assistance",
+      mechanic: mechanicInfo,
+      responseTimeMinutes: null,
     };
 
     return res.status(200).json({
@@ -667,8 +529,14 @@ export const getSummary = async (req, res) => {
     const request = await findOwnedRequest(req, res);
     if (!request) return;
 
-    const state = getWorkflowState(request.id);
-    const [mechanicProfile] = await getEligibleMechanics(request, state);
+    // Build mechanic info directly from populated request — no extra DB call
+    const mechanicInfo = request.mechanic
+      ? {
+        id: request.mechanic._id?.toString(),
+        name: request.mechanic.fullName || "Mechanic",
+        phone: request.mechanic.mobile || null,
+      }
+      : null;
 
     // Fetch separate payment records from MongoDB
     const payments = await Payment.find({
@@ -682,9 +550,6 @@ export const getSummary = async (req, res) => {
       (p) => p.paymentType === "repair"
     );
 
-    const problemWork =
-      mockWorkByProblem[request.problem] || mockWorkByProblem.Other;
-
     return res.status(200).json({
       success: true,
       requestId: request.id,
@@ -694,9 +559,7 @@ export const getSummary = async (req, res) => {
       problem: request.problem,
       description: request.description,
       status: request.status,
-      mechanic: mechanicProfile || {
-        name: request.mechanic?.fullName || "Mechanic",
-      },
+      mechanic: mechanicInfo,
       inspectionFee: request.inspectionFee,
       inspectionPayment: request.inspectionPayment,
       inspectionPaymentRecord,
@@ -713,19 +576,19 @@ export const getSummary = async (req, res) => {
       },
       completion: {
         completedAt: request.repairCompletedAt || request.completedAt,
-        workCompleted: request.repairQuotation?.description || problemWork.work,
+        workCompleted: request.repairQuotation?.description || request.problem || "Vehicle repair completed",
         problemTitle: request.problem,
       },
       payment:
         request.repairPayment?.status === "paid"
           ? {
-              method: request.repairPayment.paymentMethod,
-              status: "confirmed",
-              amount:
-                request.repairPayment.totalPaid || request.repairPayment.amount,
-              paidAt: request.repairPayment.paidAt,
-              confirmationCode: request.repairPayment.transactionId,
-            }
+            method: request.repairPayment.paymentMethod,
+            status: "confirmed",
+            amount:
+              request.repairPayment.totalPaid || request.repairPayment.amount,
+            paidAt: request.repairPayment.paidAt,
+            confirmationCode: request.repairPayment.transactionId,
+          }
           : null,
     });
   } catch (error) {

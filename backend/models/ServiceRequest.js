@@ -129,6 +129,16 @@ const serviceRequestSchema = new mongoose.Schema(
     inspectionStartedAt: { type: Date, default: null },
     inspectionCompletedAt: { type: Date, default: null },
 
+    // Real-time persisted mechanic GPS location (only updated while on_the_way)
+    mechanicLocation: {
+      coordinates: {
+        type: [Number],
+        default: undefined,
+      },
+      accuracy: { type: Number, default: null },
+      updatedAt: { type: Date, default: null },
+    },
+
     // Step 8: Separate repair quotation submitted by mechanic
     repairQuotation: {
       labourCharge: { type: Number, default: 0, min: 0 },
@@ -179,6 +189,32 @@ const serviceRequestSchema = new mongoose.Schema(
         },
       ],
       default: [],
+    },
+
+    acceptedAt: {
+      type: Date,
+      default: null,
+    },
+
+    noMechanicsAvailable: {
+      type: Boolean,
+      default: false,
+    },
+
+    noMechanicsReason: {
+      type: String,
+      default: "",
+    },
+
+    retryCount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
+    lastRetriedAt: {
+      type: Date,
+      default: null,
     },
   },
   {

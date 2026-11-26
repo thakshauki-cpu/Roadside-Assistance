@@ -107,6 +107,7 @@ function Notifications() {
     const socket = getSocket();
     if (socket) {
       const handleNewNotif = (notif) => {
+        if (!notif?._id) return;
         const formatted = {
           id: notif._id,
           type:
@@ -123,12 +124,32 @@ function Notifications() {
           unread: true,
           actions: [],
         };
-        setNotifications((prev) => [formatted, ...prev]);
+        setNotifications((prev) =>
+          prev.some((item) => item.id === formatted.id)
+            ? prev
+            : [formatted, ...prev]
+        );
       };
 
+      const handleNotifRead = (payload) => {
+        if (payload?.allRead) {
+          setNotifications((prev) => prev.map((n) => ({ ...n, unread: false })));
+        } else if (payload?.notificationId) {
+          setNotifications((prev) =>
+            prev.map((n) =>
+              n.id === payload.notificationId ? { ...n, unread: false } : n
+            )
+          );
+        }
+      };
+
+      socket.on("notification_created", handleNewNotif);
       socket.on("new_notification", handleNewNotif);
+      socket.on("notification_read", handleNotifRead);
       return () => {
+        socket.off("notification_created", handleNewNotif);
         socket.off("new_notification", handleNewNotif);
+        socket.off("notification_read", handleNotifRead);
       };
     }
   }, []);

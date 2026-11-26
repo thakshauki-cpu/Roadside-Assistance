@@ -1,5 +1,6 @@
 
 import { useState } from "react";
+import { updateSocketAuth } from "../../socket";
 import {
   Phone,
   LockKeyhole,
@@ -70,6 +71,7 @@ function LoginPage() {
 
         storage.setItem("adminToken", adminData.token);
         storage.setItem("adminUser", JSON.stringify(adminData.admin));
+        updateSocketAuth();
 
         navigate("/admin/dashboard", { replace: true });
         return;
@@ -110,6 +112,7 @@ function LoginPage() {
 
         storage.setItem("token", customerData.token);
         storage.setItem("user", JSON.stringify(customerData.user));
+        updateSocketAuth();
 
         navigate("/dashboard", { replace: true });
         return;
@@ -152,6 +155,7 @@ function LoginPage() {
 
         storage.setItem("token", mechanicData.token);
         storage.setItem("user", JSON.stringify(mechanicData.user));
+        updateSocketAuth();
 
         navigate("/mechanic/dashboard", { replace: true });
         return;
