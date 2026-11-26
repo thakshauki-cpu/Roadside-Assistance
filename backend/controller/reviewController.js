@@ -66,7 +66,11 @@ export const getCustomerReview = async (req, res) => {
 export const submitCustomerReview = async (req, res) => {
   try {
     const customer = await User.findById(req.user).select("role isActive");
-    if (!customer || customer.role !== "customer" || !customer.isActive) {
+    if (
+      !customer ||
+      customer.role !== "customer" ||
+      customer.isActive === false
+    ) {
       return res.status(403).json({
         message: "Only an active customer can submit a review.",
       });
@@ -77,7 +81,8 @@ export const submitCustomerReview = async (req, res) => {
       return res.status(400).json({ message: "Invalid service request ID." });
     }
 
-    const { rating, comment } = req.body || {};
+    const { rating } = req.body || {};
+    const comment = req.body?.comment ?? "";
     if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
       return res.status(400).json({
         message: "Rating must be a whole number from 1 to 5.",
@@ -85,11 +90,10 @@ export const submitCustomerReview = async (req, res) => {
     }
     if (
       typeof comment !== "string" ||
-      !comment.trim() ||
       comment.trim().length > 1000
     ) {
       return res.status(400).json({
-        message: "Review comment must contain 1 to 1000 characters.",
+        message: "Review comment must be text with at most 1000 characters.",
       });
     }
 

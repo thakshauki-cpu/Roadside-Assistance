@@ -30,9 +30,8 @@ const reviewSchema = new mongoose.Schema(
     },
     comment: {
       type: String,
-      required: true,
       trim: true,
-      minlength: 1,
+      default: "",
       maxlength: 1000,
     },
   },

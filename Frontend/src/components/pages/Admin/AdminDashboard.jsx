@@ -105,19 +105,30 @@ function AdminDashboard() {
 
   useEffect(() => {
     let active = true;
-    getAdminReviews()
-      .then((data) => {
-        if (active) setReviewData(data);
-      })
-      .catch((err) => {
-        if (active) setReviewError(err.message);
-      })
-      .finally(() => {
-        if (active) setReviewLoading(false);
-      });
+    let refreshTimer;
+
+    const loadReviews = async (isInitial = false) => {
+      try {
+        const data = await getAdminReviews();
+        if (active) {
+          setReviewData(data);
+          setReviewError("");
+        }
+      } catch (err) {
+        if (active && isInitial) setReviewError(err.message);
+      } finally {
+        if (active) {
+          if (isInitial) setReviewLoading(false);
+          refreshTimer = setTimeout(() => loadReviews(), 5000);
+        }
+      }
+    };
+
+    loadReviews(true);
 
     return () => {
       active = false;
+      clearTimeout(refreshTimer);
     };
   }, []);
 
@@ -581,7 +592,11 @@ function AdminDashboard() {
                 </span>
               </div>
 
-              <p>"{review.comment}"</p>
+              <p>
+                {review.comment
+                  ? `"${review.comment}"`
+                  : "Rating only (no written comment)."}
+              </p>
               <small>
                 <span>{review.customerId?.fullName || "Customer"} · {review.serviceRequestId?.problem || "Service request"}</span>
                 <time dateTime={review.createdAt}>{new Date(review.createdAt).toLocaleDateString()}</time>

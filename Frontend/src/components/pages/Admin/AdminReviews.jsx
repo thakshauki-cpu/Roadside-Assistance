@@ -10,19 +10,30 @@ function AdminReviews() {
 
   useEffect(() => {
     let active = true;
-    getAdminReviews()
-      .then((reviews) => {
-        if (active) setData(reviews);
-      })
-      .catch((loadError) => {
-        if (active) setError(loadError.message);
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
+    let refreshTimer;
+
+    const loadReviews = async (isInitial = false) => {
+      try {
+        const reviews = await getAdminReviews();
+        if (active) {
+          setData(reviews);
+          setError("");
+        }
+      } catch (loadError) {
+        if (active && isInitial) setError(loadError.message);
+      } finally {
+        if (active) {
+          if (isInitial) setLoading(false);
+          refreshTimer = setTimeout(() => loadReviews(), 5000);
+        }
+      }
+    };
+
+    loadReviews(true);
 
     return () => {
       active = false;
+      clearTimeout(refreshTimer);
     };
   }, []);
 
@@ -58,7 +69,11 @@ function AdminReviews() {
                     {"★".repeat(review.rating)}
                   </span>
                 </div>
-                <p>"{review.comment}"</p>
+                <p>
+                  {review.comment
+                    ? `"${review.comment}"`
+                    : "Rating only (no written comment)."}
+                </p>
                 <small>
                   <span>
                     Customer: {review.customerId?.fullName || "Customer"} · Service: {serviceRequest?.problem || "Service request"}

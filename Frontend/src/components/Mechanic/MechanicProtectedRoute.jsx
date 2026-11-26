@@ -3,7 +3,8 @@ import { Navigate } from "react-router-dom";
 import { getMechanicProfile } from "../../api/mechanic";
 
 function MechanicProtectedRoute({ children }) {
-  const token = localStorage.getItem("token");
+  const token =
+    localStorage.getItem("token") || sessionStorage.getItem("token");
   const [authorized, setAuthorized] = useState(false);
   const [checking, setChecking] = useState(Boolean(token));
 

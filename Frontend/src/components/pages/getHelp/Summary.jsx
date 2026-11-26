@@ -10,6 +10,7 @@ import {
   Banknote,
   CreditCard,
   QrCode,
+  Wrench,
   ShieldCheck,
   MessageSquareQuote,
   ReceiptText,
@@ -150,7 +151,7 @@ function Summary() {
       setReviewSuccess("");
       const result = await submitCustomerReview(requestId, {
         rating,
-        comment: review.trim() || "Good service.",
+        comment: review.trim(),
       });
       setReviewRecord(result.review);
       setReviewSuccess(result.message || "Thank you! Review saved successfully.");
@@ -401,6 +402,8 @@ function Summary() {
                       type="button"
                       style={{ background: "none", border: "none", cursor: "pointer", padding: "2px" }}
                       onClick={() => setRating(star)}
+                      disabled={Boolean(reviewRecord)}
+                      aria-label={`Rate ${star} out of 5 stars`}
                     >
                       <Star
                         size={28}
@@ -416,9 +419,11 @@ function Summary() {
 
                 <textarea
                   rows="3"
-                  placeholder="Share details of your experience (e.g. quick arrival, polite behavior)..."
+                  aria-label="Written review (optional)"
+                  placeholder="Written review (optional)"
                   value={review}
                   onChange={(e) => setReview(e.target.value)}
+                  disabled={Boolean(reviewRecord)}
                   style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "13px", marginBottom: "10px" }}
                 />
 
@@ -430,9 +435,13 @@ function Summary() {
                   className="gh-next-button"
                   style={{ width: "100%", justifyContent: "center" }}
                   onClick={handleSubmitReview}
-                  disabled={reviewSubmitting}
+                  disabled={reviewSubmitting || Boolean(reviewRecord)}
                 >
-                  {reviewSubmitting ? "Submitting..." : reviewRecord ? "Update Review" : "Submit Review"}
+                  {reviewSubmitting
+                    ? "Submitting..."
+                    : reviewRecord
+                      ? "Review Submitted"
+                      : "Submit Rating"}
                 </button>
               </section>
 

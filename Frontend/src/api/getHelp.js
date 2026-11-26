@@ -7,7 +7,8 @@ const request = async (path, options = {}) => {
     );
   }
 
-  const token = localStorage.getItem("token");
+  const token =
+    localStorage.getItem("token") || sessionStorage.getItem("token");
   if (!token) {
     throw new Error("Please login again to continue your service request.");
   }

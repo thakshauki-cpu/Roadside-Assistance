@@ -2,15 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Navigation,
-  Gauge,
-  TrafficCone,
   LocateFixed,
-  Plus,
-  Minus,
-  Layers,
-  Truck,
-  Wrench,
-  MapPin,
   BadgeCheck,
   Star,
   Timer,
@@ -21,12 +13,20 @@ import {
   ArrowLeft,
   ArrowRight,
   Check,
-  CarFront,
   CreditCard,
   AlertTriangle,
   ReceiptText,
+  Wrench,
   X,
 } from "lucide-react";
+import {
+  CircleMarker,
+  MapContainer,
+  Polyline,
+  TileLayer,
+  Tooltip,
+  useMap,
+} from "react-leaflet";
 
 import DashboardSidebar from "../../Dashboard/Sidebar";
 import DashboardTopbar from "../../Dashboard/Topbar";
@@ -38,33 +38,56 @@ import {
   respondToRepairQuotation,
 } from "../../../api/getHelp";
 import {
-  formatRs,
   getCreatedRequestId,
   readRequest,
 } from "./requestSampleData";
 import { getSocket, joinRequestRoom, leaveRequestRoom } from "../../../socket";
 import "../../styles/GetHelp.css";
 import "../../styles/Tracking.css";
+import "leaflet/dist/leaflet.css";
 
-const mapFiles = import.meta.glob("../../../assets/tracking-map.{png,jpg,jpeg,webp}", {
-  eager: true,
-  import: "default",
-});
-const mechanicFiles = import.meta.glob("../../../assets/mechanic-siva.{png,jpg,jpeg,webp}", {
-  eager: true,
-  import: "default",
-});
-const mapImage = Object.values(mapFiles)[0];
-const mechanicImage = Object.values(mechanicFiles)[0];
+const toMapPoint = (coordinates) => {
+  if (!Array.isArray(coordinates) || coordinates.length !== 2) return null;
 
-const SECONDS_PER_MINUTE = 2;
+  const [longitude, latitude] = coordinates.map(Number);
+  if (
+    !Number.isFinite(longitude) ||
+    !Number.isFinite(latitude) ||
+    longitude < -180 ||
+    longitude > 180 ||
+    latitude < -90 ||
+    latitude > 90
+  ) {
+    return null;
+  }
+
+  return [latitude, longitude];
+};
+
+function FitTrackingMap({ pointsKey }) {
+  const map = useMap();
+
+  useEffect(() => {
+    const points = pointsKey
+      .split(";")
+      .filter(Boolean)
+      .map((point) => point.split(",").map(Number));
+
+    if (points.length > 1) {
+      map.fitBounds(points, { padding: [36, 36], maxZoom: 15 });
+    } else if (points.length === 1) {
+      map.setView(points[0], 14);
+    }
+  }, [map, pointsKey]);
+
+  return null;
+}
 
 function Tracking() {
   const navigate = useNavigate();
   const requestId = getCreatedRequestId();
   const saved = readRequest();
   const plate = saved.vehicle?.registrationNumber || "Vehicle";
-  const [elapsed, setElapsed] = useState(0);
   const [notice, setNotice] = useState("");
   const [tracking, setTracking] = useState(null);
   const [assignment, setAssignment] = useState(null);
@@ -95,7 +118,7 @@ function Tracking() {
   }, [requestId]);
 
   useEffect(() => {
-    loadTrackingData(true);
+    Promise.resolve().then(() => loadTrackingData(true));
 
     // Periodic API polling every 3 seconds for live status updates
     const pollInterval = setInterval(() => {
@@ -128,22 +151,6 @@ function Tracking() {
 
     return () => clearInterval(pollInterval);
   }, [loadTrackingData, requestId]);
-
-  useEffect(() => {
-    loadTrackingData(true);
-
-    // Periodic API polling every 3 seconds for live status updates
-    const pollInterval = setInterval(() => {
-      loadTrackingData(false);
-    }, 3000);
-
-    return () => clearInterval(pollInterval);
-  }, [loadTrackingData]);
-
-  useEffect(() => {
-    const timer = setInterval(() => setElapsed((previous) => previous + 1), 1000);
-    return () => clearInterval(timer);
-  }, []);
 
   const showNotice = (text) => {
     setNotice(text);
@@ -325,6 +332,38 @@ function Tracking() {
 
   const isRepairPaid = currentStatus === "completed";
 
+  const customerCoordinates =
+    tracking.serviceRequest?.location?.coordinates ||
+    saved.location?.coordinates;
+  const customerMapPoint = toMapPoint(customerCoordinates);
+  const mechanicBasePoint = toMapPoint(mechanic.coordinates);
+  const mechanicMapPoint =
+    hasArrived && customerMapPoint ? customerMapPoint : mechanicBasePoint;
+  const customerLatitude = customerMapPoint?.[0];
+  const customerLongitude = customerMapPoint?.[1];
+  const mechanicLatitude = mechanicMapPoint?.[0];
+  const mechanicLongitude = mechanicMapPoint?.[1];
+  const mapPoints = [];
+  if (customerLatitude !== undefined && customerLongitude !== undefined) {
+    mapPoints.push([customerLatitude, customerLongitude]);
+  }
+  if (mechanicLatitude !== undefined && mechanicLongitude !== undefined) {
+    const mechanicPoint = [mechanicLatitude, mechanicLongitude];
+    if (
+      !mapPoints.some(
+        ([latitude, longitude]) =>
+          latitude === mechanicLatitude && longitude === mechanicLongitude
+      )
+    ) {
+      mapPoints.push(mechanicPoint);
+    }
+  }
+  const mapPointsKey = mapPoints.map((point) => point.join(",")).join(";");
+  const routePoints =
+    isOnTheWay && !hasArrived && customerMapPoint && mechanicBasePoint
+      ? [mechanicBasePoint, customerMapPoint]
+      : null;
+
   // Steps matching business workflow
   const steps = [
     {
@@ -435,7 +474,7 @@ function Tracking() {
                 <strong style={{ color: "#b45309", fontSize: "16px" }}>Inspection Fee Payment Required</strong>
               </div>
               <p style={{ margin: "0 0 12px", fontSize: "14px", color: "#78350f" }}>
-                The mechanic has submitted an inspection fee of <strong>Rs. {Number(tracking.inspectionFee?.totalAmount || 2000).toLocaleString()}</strong>.
+                The mechanic has submitted an inspection fee of <strong>Rs. {Number(tracking.inspectionFee?.totalAmount || 0).toLocaleString()}</strong>.
                 The mechanic cannot travel until this fee is confirmed.
               </p>
               <button
@@ -444,7 +483,7 @@ function Tracking() {
                 onClick={handlePayInspectionDemo}
                 disabled={actionLoading}
               >
-                {actionLoading ? "Processing Demo Payment..." : `Pay Inspection Fee (Demo) - Rs. ${Number(tracking.inspectionFee?.totalAmount || 2000).toLocaleString()}`}
+                {actionLoading ? "Processing Demo Payment..." : `Pay Inspection Fee (Demo) - Rs. ${Number(tracking.inspectionFee?.totalAmount || 0).toLocaleString()}`}
               </button>
             </div>
           )}
@@ -579,20 +618,66 @@ function Tracking() {
               {/* Map panel */}
               <section className="track-map-card">
                 <div className="track-map-wrap">
-                  <div className="track-mock-map">
-                    <div className="map-radar" />
-                    <div className="map-vehicle-marker">
-                      <CarFront size={18} />
-                      <span>{plate}</span>
+                  {mapPoints.length > 0 ? (
+                    <MapContainer
+                      center={mapPoints[0]}
+                      zoom={mapPoints.length > 1 ? 12 : 14}
+                      scrollWheelZoom={false}
+                      className="track-leaflet-map"
+                    >
+                      <FitTrackingMap pointsKey={mapPointsKey} />
+                      <TileLayer
+                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                      />
+                      {routePoints && (
+                        <Polyline
+                          positions={routePoints}
+                          pathOptions={{
+                            color: "#2055f5",
+                            dashArray: "8 8",
+                            weight: 5,
+                          }}
+                        />
+                      )}
+                      {customerMapPoint && (
+                        <CircleMarker
+                          center={customerMapPoint}
+                          radius={14}
+                          pathOptions={{
+                            color: "#2055f5",
+                            fillColor: "#2055f5",
+                            fillOpacity: 0.2,
+                            weight: 4,
+                          }}
+                        >
+                          <Tooltip>Customer-selected location</Tooltip>
+                        </CircleMarker>
+                      )}
+                      {mechanicMapPoint && (
+                        <CircleMarker
+                          center={mechanicMapPoint}
+                          radius={7}
+                          pathOptions={{
+                            color: "#ffffff",
+                            fillColor: "#dc2626",
+                            fillOpacity: 1,
+                            weight: 3,
+                          }}
+                        >
+                          <Tooltip>
+                            {hasArrived
+                              ? "Mechanic arrived at customer location"
+                              : "Mechanic workshop starting location"}
+                          </Tooltip>
+                        </CircleMarker>
+                      )}
+                    </MapContainer>
+                  ) : (
+                    <div className="track-map-empty" role="status">
+                      Location coordinates are unavailable for this request.
                     </div>
-
-                    {isOnTheWay && (
-                      <div className="map-mechanic-marker">
-                        <Truck size={18} />
-                        <span>{mechanic.name || "Technician"}</span>
-                      </div>
-                    )}
-                  </div>
+                  )}
 
                   <div className="track-map-overlay">
                     <span className="track-eta-chip">
@@ -611,7 +696,11 @@ function Tracking() {
                 <div className="track-map-bar">
                   <div className="track-speed-info">
                     <Navigation size={15} />
-                    <span>Location: {saved.location?.address || "On-site"}</span>
+                    <span>
+                      Location: {tracking.serviceRequest?.location?.address ||
+                        saved.location?.address ||
+                        "Address unavailable"}
+                    </span>
                   </div>
                   <div className="track-controls">
                     <button type="button" onClick={() => showNotice("Map re-centered to your vehicle.")}>
@@ -619,6 +708,34 @@ function Tracking() {
                     </button>
                   </div>
                 </div>
+                <div className="track-map-legend" aria-label="Map markers">
+                  {customerMapPoint && (
+                    <span>
+                      <i className="track-legend-dot customer" />
+                      Customer-selected location
+                    </span>
+                  )}
+                  {mechanicMapPoint && (
+                    <span>
+                      <i className="track-legend-dot mechanic" />
+                      {hasArrived
+                        ? "Mechanic at customer location"
+                        : "Mechanic workshop location"}
+                    </span>
+                  )}
+                </div>
+                {(!customerMapPoint || (!mechanicBasePoint && !hasArrived)) && (
+                  <p className="track-map-note" role="status">
+                    {!customerMapPoint
+                      ? "The customer location coordinates are missing. The map cannot show the selected pickup point."
+                      : "The mechanic's workshop coordinates are missing. The mechanic marker will appear at the customer location after arrival is reported."}
+                  </p>
+                )}
+                {hasArrived && customerMapPoint && (
+                  <p className="track-map-note arrived" role="status">
+                    The mechanic reported arrival. Both map markers now indicate your selected location.
+                  </p>
+                )}
               </section>
 
               {/* ACTION CARD: Step-Specific Action Banners */}

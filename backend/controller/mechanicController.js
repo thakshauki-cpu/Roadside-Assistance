@@ -2,6 +2,7 @@ import MechanicProfile from "../models/MechanicProfile.js";
 import User from "../models/User.js";
 import ServiceRequest from "../models/ServiceRequest.js";
 import Payment from "../models/Payment.js";
+import mongoose from "mongoose";
 
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 

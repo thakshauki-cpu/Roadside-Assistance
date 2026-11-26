@@ -176,6 +176,7 @@ const getEligibleMechanics = async (request, state) => {
         completedJobs,
         distanceKm: distance !== null ? Number(distance.toFixed(1)) : 2.5,
         location: profile.location?.address || "Batticaloa",
+        coordinates: hasCoordinates ? [longitude, latitude] : null,
         isAssigned: assignedMechanicId?.toString() === mechanicId,
       };
     })

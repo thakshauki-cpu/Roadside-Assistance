@@ -80,6 +80,7 @@
 
 .roadside-banner-content h2 {
   margin:26px 0 0;
+  color: #ffffff;
   font-size: 30px;
   line-height: 1.16;
   font-weight: 750;
@@ -509,6 +510,47 @@
 .request-rating > div {
   display: flex;
   color: #f59e0b;
+}
+
+.dashboard-inspection-fee {
+  margin-top: 12px;
+  padding: 11px;
+  border: 1px solid #c9daff;
+  border-radius: 9px;
+  background: #eef4ff;
+  color: #182238;
+}
+
+.dashboard-inspection-fee h5 {
+  margin: 0 0 8px;
+  color: #1453ff;
+  font-size: 13px;
+}
+
+.dashboard-inspection-fee > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 3px 0;
+  font-size: 11px;
+}
+
+.dashboard-inspection-fee-total {
+  margin-top: 4px;
+  padding-top: 7px !important;
+  border-top: 1px dashed #9bb7ff;
+  font-size: 12px !important;
+}
+
+.dashboard-inspection-fee > p {
+  margin: 7px 0 0;
+  color: #38527d;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.dashboard-inspection-fee .dashboard-inspection-fee-error {
+  color: #991b1b;
 }
 
 .invoice-button {

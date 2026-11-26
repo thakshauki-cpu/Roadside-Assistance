@@ -83,16 +83,26 @@ function MechanicDashboard() {
 
   useEffect(() => {
     let active = true;
-    getMechanicReviews()
-      .then((data) => {
-        if (active) setReviewData(data);
-      })
-      .catch((error) => {
-        if (active) setReviewsError(error.message);
-      })
-      .finally(() => {
-        if (active) setReviewsLoading(false);
-      });
+    let refreshTimer;
+
+    const loadReviews = async (isInitial = false) => {
+      try {
+        const data = await getMechanicReviews();
+        if (active) {
+          setReviewData(data);
+          setReviewsError("");
+        }
+      } catch (error) {
+        if (active && isInitial) setReviewsError(error.message);
+      } finally {
+        if (active) {
+          if (isInitial) setReviewsLoading(false);
+          refreshTimer = setTimeout(() => loadReviews(), 5000);
+        }
+      }
+    };
+
+    loadReviews(true);
 
     getMechanicDashboardStats()
       .then((data) => {
@@ -104,6 +114,7 @@ function MechanicDashboard() {
 
     return () => {
       active = false;
+      clearTimeout(refreshTimer);
     };
   }, []);
 
@@ -444,7 +455,9 @@ function MechanicDashboard() {
                         {"★".repeat(review.rating)}
                       </span>
                     </div>
-                    <p>{review.comment}</p>
+                    <p>
+                      {review.comment || "Rating only (no written comment)."}
+                    </p>
                     <small>
                       {serviceRequest?.problem || "Service request"}
                       {serviceRequest?.vehicle?.model ? ` · ${serviceRequest.vehicle.model}` : ""}

@@ -37,9 +37,12 @@ function MechanicFound() {
   const [assignment, setAssignment] = useState(null);
   const [nearbyMechanics, setNearbyMechanics] = useState([]);
   const [secondsLeft, setSecondsLeft] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(Boolean(requestId));
   const [actionLoading, setActionLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState(
+    requestId ? "" : "Your service request is missing. Please submit it again."
+  );
+  const [nearbyError, setNearbyError] = useState("");
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("card");
   const [showDemoModal, setShowDemoModal] = useState(false);
   const [demoSuccess, setDemoSuccess] = useState(null);
@@ -47,19 +50,40 @@ function MechanicFound() {
   useEffect(() => {
     let active = true;
 
-    const loadMechanicData = async () => {
+    if (!requestId) {
+      return () => {
+        active = false;
+      };
+    }
+
+    getNearbyMechanics(requestId)
+      .then((nearbyData) => {
+        if (active) setNearbyMechanics(nearbyData.mechanics || []);
+      })
+      .catch((loadError) => {
+        if (active) setNearbyError(loadError.message);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [requestId]);
+
+  useEffect(() => {
+    let active = true;
+    let pollTimer;
+
+    if (!requestId) {
+      return () => {
+        active = false;
+      };
+    }
+
+    const loadAssignment = async (isInitial = false) => {
       try {
-        if (!requestId) {
-          throw new Error("Your service request is missing. Please submit it again.");
-        }
+        const assignmentData = await getAssignment(requestId);
+        if (!active) return true;
 
-        const [nearbyData, assignmentData] = await Promise.all([
-          getNearbyMechanics(requestId),
-          getAssignment(requestId),
-        ]);
-        if (!active) return;
-
-        // If already paid inspection fee or further in workflow, redirect to tracking
         if (
           assignmentData.inspectionPayment?.status === "paid" ||
           [
@@ -75,23 +99,36 @@ function MechanicFound() {
             "completed",
           ].includes(assignmentData.status)
         ) {
-          navigate("/get-help/tracking");
-          return;
+          navigate("/get-help/tracking", { replace: true });
+          return true;
         }
 
-        setNearbyMechanics(nearbyData.mechanics || []);
         setAssignment(assignmentData);
-        setSecondsLeft(assignmentData.quotation?.quotationHoldSeconds || 300);
+        setError("");
+        if (isInitial) {
+          setSecondsLeft(assignmentData.quotation?.quotationHoldSeconds || 300);
+        }
+        return false;
       } catch (loadError) {
         if (active) setError(loadError.message);
+        return false;
       } finally {
-        if (active) setLoading(false);
+        if (active && isInitial) setLoading(false);
       }
     };
 
-    loadMechanicData();
+    const pollAssignment = async (isInitial = false) => {
+      const shouldStop = await loadAssignment(isInitial);
+      if (active && !shouldStop) {
+        pollTimer = setTimeout(() => pollAssignment(), 3000);
+      }
+    };
+
+    pollAssignment(true);
+
     return () => {
       active = false;
+      clearTimeout(pollTimer);
     };
   }, [requestId, navigate]);
 
@@ -107,14 +144,11 @@ function MechanicFound() {
   const seconds = String(secondsLeft % 60).padStart(2, "0");
   const mechanic = assignment?.mechanic;
 
-  // Use real backend inspection fee or fallback to default breakdown
-  const inspectionFee = assignment?.inspectionFee || {
-    travelFee: 500,
-    visitFee: 500,
-    inspectionCharge: 1000,
-    totalAmount: 2000,
-    description: "Mechanic travelling, location visit, and vehicle inspection",
-  };
+  const inspectionFee = assignment?.inspectionFee;
+  const hasSubmittedInspectionFee =
+    inspectionFee?.status === "submitted" &&
+    Number.isFinite(Number(inspectionFee.totalAmount)) &&
+    Number(inspectionFee.totalAmount) > 0;
 
   const handleQuotationResponse = async (response) => {
     try {
@@ -145,6 +179,11 @@ function MechanicFound() {
 
   // STEP 3: Customer executes demo payment for inspection fee
   const handleExecuteDemoPayment = async () => {
+    if (!hasSubmittedInspectionFee) {
+      setError("Please wait for the mechanic to submit a valid inspection fee.");
+      return;
+    }
+
     try {
       setActionLoading(true);
       setError("");
@@ -159,10 +198,7 @@ function MechanicFound() {
       });
 
       setDemoSuccess(result.message || "Inspection fee demo payment confirmed!");
-
-      setTimeout(() => {
-        navigate("/get-help/tracking");
-      }, 1000);
+      navigate("/get-help/tracking", { replace: true });
     } catch (payError) {
       setError(payError.message || "Failed to process inspection fee demo payment.");
     } finally {
@@ -302,6 +338,7 @@ function MechanicFound() {
 
               <section className="gethelp-card">
                 <h4 className="specialty-title">AVAILABLE MECHANICS NEARBY</h4>
+                {nearbyError && <p className="form-error" role="alert">{nearbyError}</p>}
                 <div className="specialty-grid">
                   {nearbyMechanics.map((item) => (
                     <div className="specialty-item" key={item.id}>
@@ -329,48 +366,58 @@ function MechanicFound() {
                 </p>
 
                 <div className="quotation-box">
-                  <div className="quotation-line">
-                    <div>
-                      <strong>Mechanic Travelling Charge</strong>
-                      <p>Fuel &amp; distance coverage to breakdown area</p>
-                    </div>
-                    <strong>Rs. {Number(inspectionFee.travelFee || 0).toLocaleString()}</strong>
-                  </div>
+                  {hasSubmittedInspectionFee ? (
+                    <>
+                      <div className="quotation-line">
+                        <div>
+                          <strong>Mechanic Travelling Charge</strong>
+                          <p>Fuel &amp; distance coverage to breakdown area</p>
+                        </div>
+                        <strong>Rs. {Number(inspectionFee.travelFee || 0).toLocaleString()}</strong>
+                      </div>
 
-                  <div className="quotation-line">
-                    <div>
-                      <strong>Breakdown Location Visit</strong>
-                      <p>Emergency roadside dispatch fee</p>
-                    </div>
-                    <strong>Rs. {Number(inspectionFee.visitFee || 0).toLocaleString()}</strong>
-                  </div>
+                      <div className="quotation-line">
+                        <div>
+                          <strong>Breakdown Location Visit</strong>
+                          <p>Emergency roadside dispatch fee</p>
+                        </div>
+                        <strong>Rs. {Number(inspectionFee.visitFee || 0).toLocaleString()}</strong>
+                      </div>
 
-                  <div className="quotation-line">
-                    <div>
-                      <strong>Vehicle Inspection Charge</strong>
-                      <p>On-site diagnostic inspection &amp; tool usage</p>
-                    </div>
-                    <strong>Rs. {Number(inspectionFee.inspectionCharge || 0).toLocaleString()}</strong>
-                  </div>
+                      <div className="quotation-line">
+                        <div>
+                          <strong>Vehicle Inspection Charge</strong>
+                          <p>On-site diagnostic inspection &amp; tool usage</p>
+                        </div>
+                        <strong>Rs. {Number(inspectionFee.inspectionCharge || 0).toLocaleString()}</strong>
+                      </div>
 
-                  <div className="quotation-total">
-                    <div>
-                      <small>TOTAL INSPECTION FEE</small>
-                      <span>Pre-payment required to dispatch mechanic</span>
-                    </div>
-                    <strong>Rs. {Number(inspectionFee.totalAmount || 0).toLocaleString()}</strong>
-                  </div>
+                      <div className="quotation-total">
+                        <div>
+                          <small>TOTAL INSPECTION FEE</small>
+                          <span>Pre-payment required to dispatch mechanic</span>
+                        </div>
+                        <strong>Rs. {Number(inspectionFee.totalAmount).toLocaleString()}</strong>
+                      </div>
+                    </>
+                  ) : (
+                    <p role="status">
+                      Waiting for {mechanic.name} to submit the inspection fee.
+                    </p>
+                  )}
                 </div>
 
-                <div className="guarantee-note" style={{ background: "#eef4ff", border: "1px solid #c9daff", padding: "12px", borderRadius: "10px", marginTop: "14px" }}>
-                  <CircleCheck size={16} color="#1453ff" />
-                  <p style={{ margin: 0, fontSize: "12px", color: "#223567" }}>
-                    <strong>Notice:</strong> This inspection fee confirms the mechanic dispatch. The mechanic will NOT travel until this fee is paid.
-                  </p>
-                </div>
+                {hasSubmittedInspectionFee && (
+                  <>
+                    <div className="guarantee-note" style={{ background: "#eef4ff", border: "1px solid #c9daff", padding: "12px", borderRadius: "10px", marginTop: "14px" }}>
+                      <CircleCheck size={16} color="#1453ff" />
+                      <p style={{ margin: 0, fontSize: "12px", color: "#223567" }}>
+                        <strong>Notice:</strong> This inspection fee confirms the mechanic dispatch. The mechanic will NOT travel until this fee is paid.
+                      </p>
+                    </div>
 
-                <p className="settlement-title" style={{ marginTop: "14px" }}>Choose Demo Payment Method:</p>
-                <div className="settlement-chips">
+                    <p className="settlement-title" style={{ marginTop: "14px" }}>Choose Demo Payment Method:</p>
+                    <div className="settlement-chips">
                   <span
                     onClick={() => setSelectedPaymentMethod("card")}
                     style={{
@@ -404,7 +451,9 @@ function MechanicFound() {
                   >
                     <Banknote size={14} /> Cash Guarantee
                   </span>
-                </div>
+                    </div>
+                  </>
+                )}
 
                 {/* Demo Payment simulation button */}
                 <div style={{ marginTop: "18px" }}>
@@ -413,10 +462,12 @@ function MechanicFound() {
                     className="gh-next-button"
                     style={{ width: "100%", justifyContent: "center", padding: "14px", fontSize: "15px" }}
                     onClick={() => setShowDemoModal(true)}
-                    disabled={actionLoading || !mechanic}
+                    disabled={actionLoading || !mechanic || !hasSubmittedInspectionFee}
                   >
-                    Pay Inspection Fee (Demo Simulation) - Rs. {Number(inspectionFee.totalAmount || 0).toLocaleString()}
-                    <ArrowRight size={16} />
+                    {hasSubmittedInspectionFee
+                      ? `Pay Inspection Fee (Demo Simulation) - Rs. ${Number(inspectionFee.totalAmount).toLocaleString()}`
+                      : "Waiting for Inspection Fee"}
+                    {hasSubmittedInspectionFee && <ArrowRight size={16} />}
                   </button>
                 </div>
               </section>
@@ -449,10 +500,14 @@ function MechanicFound() {
                 type="button"
                 className="gh-next-button"
                 onClick={() => setShowDemoModal(true)}
-                disabled={actionLoading || !mechanic}
+                disabled={actionLoading || !mechanic || !hasSubmittedInspectionFee}
               >
-                {actionLoading ? "Processing..." : "Pay Inspection Fee"}
-                <ArrowRight size={16} />
+                {actionLoading
+                  ? "Processing..."
+                  : hasSubmittedInspectionFee
+                    ? "Pay Inspection Fee"
+                    : "Waiting for Inspection Fee"}
+                {hasSubmittedInspectionFee && <ArrowRight size={16} />}
               </button>
             </div>
           </div>
@@ -535,7 +590,7 @@ function MechanicFound() {
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", paddingTop: "8px", borderTop: "1px dashed #cbd5e1", fontSize: "15px" }}>
                 <span style={{ fontWeight: "bold" }}>Total Demo Amount:</span>
-                <strong style={{ color: "#1453ff" }}>Rs. {Number(inspectionFee.totalAmount || 0).toLocaleString()}</strong>
+                <strong style={{ color: "#1453ff" }}>Rs. {Number(inspectionFee?.totalAmount || 0).toLocaleString()}</strong>
               </div>
             </div>
 

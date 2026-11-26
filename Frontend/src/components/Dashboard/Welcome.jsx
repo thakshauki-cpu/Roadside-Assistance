@@ -16,6 +16,7 @@ import {
 import "./Welcome.css";
 import { useNavigate } from "react-router-dom";
 import { getCustomerVehicles } from "../../api/customer";
+import { getAssignment } from "../../api/getHelp";
 import carImage from "../../assets/Car.PNG";
 import bikeImage from "../../assets/Bike.PNG";
 import vanImage from "../../assets/Van.Png";
@@ -47,12 +48,16 @@ function WelcomeSection() {
   const [vehicleError, setVehicleError] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [liveRequest, setLiveRequest] = useState(null);
+  const [feeRefreshError, setFeeRefreshError] = useState(null);
+  const activeRequestId = dashboardData?.activeRequest?._id;
 
   // Get dashboard data from backend
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const token = localStorage.getItem("token");
+        const token =
+          localStorage.getItem("token") || sessionStorage.getItem("token");
 
         if (!token) {
           setError("Please login to view your dashboard.");
@@ -86,6 +91,51 @@ function WelcomeSection() {
 
     fetchDashboardData();
   }, []);
+
+  useEffect(() => {
+    let active = true;
+    let pollTimer;
+
+    if (!activeRequestId) {
+      return () => {
+        active = false;
+      };
+    }
+
+    const refreshActiveRequest = async () => {
+      try {
+        const assignment = await getAssignment(activeRequestId);
+        if (active) {
+          setLiveRequest({
+            requestId: activeRequestId,
+            status: assignment.status,
+            inspectionFee: assignment.inspectionFee,
+          });
+          setFeeRefreshError(null);
+        }
+      } catch (requestError) {
+        if (active) {
+          setFeeRefreshError({
+            requestId: activeRequestId,
+            message:
+              requestError.message ||
+              "Unable to refresh inspection fee status.",
+          });
+        }
+      } finally {
+        if (active) {
+          pollTimer = setTimeout(refreshActiveRequest, 3000);
+        }
+      }
+    };
+
+    refreshActiveRequest();
+
+    return () => {
+      active = false;
+      clearTimeout(pollTimer);
+    };
+  }, [activeRequestId]);
 
   useEffect(() => {
     let active = true;
@@ -147,7 +197,17 @@ function WelcomeSection() {
   const firstName = customer?.fullName?.split(" ")[0] || "Customer";
 
   // Use active request first, otherwise latest history
-  const recentRequest = activeRequest || recentRequests?.[0] || null;
+  const recentRequest = activeRequest
+    ? {
+        ...activeRequest,
+        ...(liveRequest?.requestId === activeRequest._id ? liveRequest : {}),
+      }
+    : recentRequests?.[0] || null;
+  const inspectionFee = recentRequest?.inspectionFee;
+  const hasSubmittedInspectionFee =
+    ["submitted", "paid"].includes(inspectionFee?.status) &&
+    Number.isFinite(Number(inspectionFee.totalAmount)) &&
+    Number(inspectionFee.totalAmount) > 0;
 
   // Format date
   const formatDate = (date) => {
@@ -389,6 +449,55 @@ function WelcomeSection() {
                     {recentRequest.description || "Service request details"}
                   </span>
                 </div>
+
+                {activeRequest && (
+                  <section
+                    className="dashboard-inspection-fee"
+                    aria-live="polite"
+                  >
+                    <h5>Inspection Fee</h5>
+                    {hasSubmittedInspectionFee ? (
+                      <>
+                        <div>
+                          <span>Travelling charge</span>
+                          <strong>
+                            Rs. {Number(inspectionFee.travelFee || 0).toLocaleString()}
+                          </strong>
+                        </div>
+                        <div>
+                          <span>Location visit</span>
+                          <strong>
+                            Rs. {Number(inspectionFee.visitFee || 0).toLocaleString()}
+                          </strong>
+                        </div>
+                        <div>
+                          <span>Vehicle inspection</span>
+                          <strong>
+                            Rs. {Number(inspectionFee.inspectionCharge || 0).toLocaleString()}
+                          </strong>
+                        </div>
+                        <div className="dashboard-inspection-fee-total">
+                          <span>Total</span>
+                          <strong>
+                            Rs. {Number(inspectionFee.totalAmount).toLocaleString()}
+                          </strong>
+                        </div>
+                        <p>
+                          {inspectionFee.status === "paid"
+                            ? "Inspection fee paid."
+                            : "Waiting for your inspection fee payment."}
+                        </p>
+                      </>
+                    ) : (
+                      <p>Waiting for the mechanic to submit the inspection fee.</p>
+                    )}
+                    {feeRefreshError?.requestId === activeRequest._id && (
+                      <p className="dashboard-inspection-fee-error" role="alert">
+                        Fee status could not refresh: {feeRefreshError.message}
+                      </p>
+                    )}
+                  </section>
+                )}
 
               </div>
 
